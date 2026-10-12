@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pompsmart · Loont tanken in België of Duitsland?</title>
+<meta name="description" content="Bereken in een paar seconden of tanken over de grens loont. Pompsmart rekent met jouw woonplaats, je auto en de brandstof die je onderweg verbruikt.">
+<link rel="canonical" href="https://pompsmart.nl/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pompsmart.nl/">
+<meta property="og:title" content="Pompsmart · Loont tanken in België of Duitsland?">
+<meta property="og:description" content="Wat houd je echt over na de rit naar de grens? Reken het uit voor jouw auto en woonplaats.">
+<meta property="og:locale" content="nl_NL">
+<meta name="theme-color" content="#0b4a8b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b4a8b'/%3E%3Cpath d='M9 7h9a2 2 0 0 1 2 2v16H7V9a2 2 0 0 1 2-2z' fill='%23fff'/%3E%3Crect x='10' y='10' width='7' height='5' fill='%230b4a8b'/%3E%3Cpath d='M20 12h2l3 3v8a1.5 1.5 0 0 1-3 0v-5h-2' fill='none' stroke='%23f2b705' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: a two-column "pump" — inputs on the left, a price-totem result board on the right; stacks on phones. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #15202e;
+  --muted: #5a6677;
+  --line: #d5dbe4;
+  --sign: #0b4a8b;        /* Dutch route-sign blue */
+  --sign-ink: #ffffff;
+  --signal: #f2b705;      /* motorway-exit yellow */
+  --good: #1d7a46;
+  --bad: #b3261e;
+  --totem: #10161f;
+  --totem-ink: #f7c948;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e6ebf2; --muted: #98a3b3; --line: #2a3442;
+    --sign: #3d82d1; --sign-ink: #ffffff; --signal: #f2c14a; --good: #4cc282; --bad: #ff8a80;
+    --totem: #05080c; --totem-ink: #f7c948; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e6ebf2; --muted: #98a3b3; --line: #2a3442;
+  --sign: #3d82d1; --sign-ink: #ffffff; --signal: #f2c14a; --good: #4cc282; --bad: #ff8a80;
+  --totem: #05080c; --totem-ink: #f7c948; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+[hidden] { display: none !important; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; }
+
+header.top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.shield { background: var(--sign); color: var(--sign-ink); font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; padding: 3px 10px; border-radius: 4px; letter-spacing: .03em; border: 2px solid var(--sign-ink); outline: 2px solid var(--sign); white-space: nowrap; }
+.shield em { font-style: normal; color: var(--signal); }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.9rem, 4.5vw, 2.6rem); line-height: 1.05; margin: 10px 0 0; text-wrap: balance; }
+.lede { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+legend { font-family: var(--font-display); font-weight: 600; font-size: .82rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 4px; }
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 420px) { .row { grid-template-columns: minmax(0, 1fr); } }
+label, .lbl { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; font-weight: 600; min-width: 0; }
+label small, .hint { font-weight: 400; color: var(--muted); font-size: .82rem; }
+input[type=number], select { font: inherit; font-weight: 400; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--sign); }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid var(--signal); outline-offset: 1px; }
+.cityrow { display: flex; gap: 8px; align-items: stretch; }
+.cityrow select { flex: 1; min-width: 0; }
+.ghost { font: inherit; font-size: .88rem; font-weight: 600; color: var(--sign); background: transparent; border: 1px solid var(--sign); border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+.ghost:hover { background: color-mix(in srgb, var(--sign) 10%, transparent); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { flex: 1; font: inherit; font-weight: 600; background: var(--bg); color: var(--ink); border: 0; padding: 8px 6px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--sign); color: var(--sign-ink); }
+.inline { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.inline output { font-family: var(--font-display); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Price totem */
+.board { display: flex; flex-direction: column; gap: 16px; min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 860px) { .board { position: static; } }
+.totem { background: var(--totem); color: #fff; border-radius: 8px; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 6px; }
+.totem .eyebrow { font-family: var(--font-display); letter-spacing: .14em; text-transform: uppercase; font-size: .8rem; color: #9fb0c4; }
+.verdict { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.5rem, 3.6vw, 2rem); line-height: 1.1; text-wrap: balance; }
+.big { font-family: var(--font-display); font-weight: 700; font-size: clamp(3rem, 9vw, 4.4rem); color: var(--totem-ink); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.big.neg { color: #ff8a80; }
+.totem .sub { color: #c9d3df; font-size: .95rem; }
+.yearly { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; padding-top: 12px; border-top: 1px dashed #2f3a48; }
+.yearly div { display: flex; flex-direction: column; }
+.yearly span { font-size: .78rem; color: #9fb0c4; text-transform: uppercase; letter-spacing: .08em; font-family: var(--font-display); }
+.yearly strong { font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 520px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.dest { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dest.best { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+.dest h3 { margin: 0; font-family: var(--font-display); font-size: 1.25rem; display: flex; align-items: center; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+.plate { font-size: .78rem; font-weight: 700; background: var(--sign); color: var(--sign-ink); border-radius: 3px; padding: 1px 6px; letter-spacing: .06em; }
+.tag { font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+.tag.yes { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+.tag.no { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+.where { color: var(--muted); font-size: .88rem; margin: 0; }
+dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin: 0; font-size: .9rem; }
+dt { color: var(--muted); }
+dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+dd.net { font-weight: 700; font-family: var(--font-display); font-size: 1.1rem; }
+dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
+.breakeven { font-size: .85rem; color: var(--muted); margin: 0; border-top: 1px solid var(--line); padding-top: 8px; }
+
+.prices { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; overflow-x: auto; }
+.prices table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.prices th, .prices td { padding: 6px 4px; text-align: left; }
+.prices th { font-family: var(--font-display); font-weight: 600; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.prices td input { max-width: 110px; }
+.prices .note { font-size: .82rem; color: var(--muted); margin: 10px 0 0; }
+.linkbtn { font: inherit; background: none; border: 0; color: var(--sign); text-decoration: underline; cursor: pointer; padding: 0; }
+.prices a, .foot a { color: var(--sign); }
+.foot { margin-top: 28px; color: var(--muted); font-size: .88rem; max-width: 75ch; display: flex; flex-direction: column; gap: 6px; }
+.foot h2 { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); margin: 12px 0 0; }
+.foot p { margin: 0; }
+.legal { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-size: .8rem; }
+.minibar { display: none; }
+@media (max-width: 860px) {
+  .minibar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--totem); color: #fff; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); text-decoration: none; font-family: var(--font-display); box-shadow: 0 -4px 16px rgb(0 0 0 / .18); }
+  .minibar strong { color: var(--totem-ink); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+  .minibar.neg strong { color: #ff8a80; }
+  .minibar span { font-size: 1.05rem; font-weight: 600; }
+  .minibar.away { display: none; }
+  .wrap { padding-bottom: 96px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand"><span class="shield">pomp<em>smart</em>.nl</span></div>
+      <h1>Tanken over de grens: levert het wat op?</h1>
+      <p class="lede">Vul je woonplaats en je auto in. Pompsmart zoekt de dichtstbijzijnde pomp in België en Duitsland, trekt de brandstof en slijtage van de rit eraf en laat zien wat je echt overhoudt.</p>
+    </div>
+  </header>
+
+  <main class="grid">
+    <form class="panel" id="form" autocomplete="off">
+      <fieldset>
+        <legend>Waar je vertrekt</legend>
+        <div class="lbl"><label for="city">Woonplaats</label>
+          <span class="cityrow">
+            <select id="city"></select>
+            <button type="button" class="ghost" id="geoBtn">Mijn locatie</button>
+          </span>
+          <small class="hint" id="geoMsg" hidden></small>
+        </div>
+        <label for="extraKm">Extra km vanaf het centrum (enkele reis)
+          <input type="number" id="extraKm" min="0" max="80" step="1" value="0" inputmode="numeric">
+          <small>Woon je buiten het centrum, tel dan een paar kilometer op.</small>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Je auto</legend>
+        <label for="car">Type auto
+          <select id="car"></select>
+        </label>
+        <div class="row">
+          <div class="lbl">Brandstof
+            <div class="seg" id="fuelSeg" role="group" aria-label="Brandstof">
+              <button type="button" data-fuel="petrol" aria-pressed="true">Euro 95</button>
+              <button type="button" data-fuel="diesel" aria-pressed="false">Diesel</button>
+            </div>
+          </div>
+          <label for="cons">Verbruik <small>liter per 100 km</small>
+            <input type="number" id="cons" min="2" max="25" step="0.1" value="6.0" inputmode="decimal">
+          </label>
+        </div>
+        <div class="row">
+          <label for="tank">Tankinhoud <small>liter</small>
+            <input type="number" id="tank" min="20" max="150" step="1" value="50" inputmode="numeric">
+          </label>
+          <label for="fills">Keer tanken per maand
+            <input type="number" id="fills" min="0" max="20" step="0.5" value="2" inputmode="decimal">
+          </label>
+        </div>
+        <div>
+          <div class="inline"><label for="level">Tank nog vol bij vertrek</label><output id="levelOut">15%</output></div>
+          <input type="range" id="level" min="0" max="75" step="5" value="15">
+          <p class="hint" id="litresHint" style="margin:2px 0 0">Je tankt ongeveer 42,5 liter.</p>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Kosten van de rit</legend>
+        <div class="row">
+          <label for="wear">Slijtage per km <small>€ voor banden, onderhoud, afschrijving</small>
+            <input type="number" id="wear" min="0" max="1" step="0.01" value="0.05" inputmode="decimal">
+          </label>
+          <label for="timeVal">Je tijd <small>€ per uur (0 = niet meerekenen)</small>
+            <input type="number" id="timeVal" min="0" max="200" step="1" value="0" inputmode="numeric">
+          </label>
+        </div>
+        <label for="override">Afstand tot de pomp zelf invullen <small>km enkele reis, leeg laten om te schatten</small>
+          <input type="number" id="override" min="0" max="400" step="1" placeholder="geschat" inputmode="numeric">
+        </label>
+      </fieldset>
+    </form>
+
+    <section class="board" id="uitkomst" aria-live="polite" aria-label="Uitkomst">
+      <div class="totem">
+        <span class="eyebrow" id="eyebrow">Beste optie per tankbeurt</span>
+        <span class="verdict" id="verdict">Tank in België</span>
+        <span class="big" id="bigNum">€ 0,00</span>
+        <span class="sub" id="bigSub"></span>
+        <div class="yearly">
+          <div><span>Per maand</span><strong id="perMonth">€ 0</strong></div>
+          <div><span>Per jaar</span><strong id="perYear">€ 0</strong></div>
+        </div>
+      </div>
+
+      <div class="cards" id="cards"></div>
+
+      <div class="prices">
+        <table>
+          <thead><tr><th>Gemiddelde pompprijs</th><th>Euro 95</th><th>Diesel</th></tr></thead>
+          <tbody>
+            <tr><td><span class="plate">NL</span> Nederland</td><td><input type="number" id="p-NL-petrol" step="0.001" inputmode="decimal" aria-label="Prijs Euro 95 Nederland"></td><td><input type="number" id="p-NL-diesel" step="0.001" inputmode="decimal" aria-label="Prijs diesel Nederland"></td></tr>
+            <tr><td><span class="plate">B</span> België</td><td><input type="number" id="p-BE-petrol" step="0.001" inputmode="decimal" aria-label="Prijs Euro 95 België"></td><td><input type="number" id="p-BE-diesel" step="0.001" inputmode="decimal" aria-label="Prijs diesel België"></td></tr>
+            <tr><td><span class="plate">D</span> Duitsland</td><td><input type="number" id="p-DE-petrol" step="0.001" inputmode="decimal" aria-label="Prijs Euro 95 Duitsland"></td><td><input type="number" id="p-DE-diesel" step="0.001" inputmode="decimal" aria-label="Prijs diesel Duitsland"></td></tr>
+          </tbody>
+        </table>
+        <p class="note">De startprijzen zijn landelijke gemiddelden uit de Weekly Oil Bulletin van de EU, <span id="priceDate">medio juli 2026</span>. Prijzen veranderen elke week, dus vul in wat je vandaag ziet. Kijk op <a href="https://www.fuel-prices.eu/lang/nl" target="_blank" rel="noopener">fuel-prices.eu</a> of de <a href="https://www.cbs.nl/nl-nl/cijfers/detail/80416ned" target="_blank" rel="noopener">pompprijzen van het CBS</a>. <button type="button" id="resetPrices" class="linkbtn">Prijzen herstellen</button></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <h2>Zo rekent Pompsmart</h2>
+    <p>De afstand is de rechte lijn van je woonplaats naar de dichtstbijzijnde pomp over de grens, keer 1,3 voor de echte route, heen en terug. De brandstof voor de rit reken je af tegen de buitenlandse prijs. Netto besparing = getankte liters × prijsverschil − brandstof voor de rit − slijtage − tijd.</p>
+    <p>Het zijn gemiddelde prijzen. Langs de snelweg betaal je meer, en pompen net over de grens zitten vaak onder het landelijk gemiddelde. In Duitsland verandert de prijs meerdere keren per dag en is tanken meestal 's avonds het goedkoopst. Ook Nederlandse pompen bij de grens zijn vaak goedkoper dan in het binnenland, dus vergelijk voordat je gaat.</p>
+    <p>Brandstof in jerrycans over de grens meenemen is aan regels gebonden. Pompsmart rekent daarom alleen met wat in je tank past.</p>
+    <p class="legal">Pompsmart geeft een schatting, geen garantie. Je gegevens blijven in je eigen browser: we gebruiken geen cookies en slaan niets op een server op. Je locatie gebruiken we alleen als je daar zelf op klikt, en die verlaat je apparaat niet.</p>
+  </footer>
+</div>
+<a class="minibar" id="minibar" href="#uitkomst" aria-label="Naar de uitkomst"><span id="miniVerdict">Tank in België</span><strong id="miniNum">€ 0,00</strong></a>
+
+<script>
+(function () {
+  // Werk deze prijzen en de datum bij als je nieuwe gemiddelden hebt.
+  const PRICE_DATE = "medio juli 2026";
+  const DEFAULT_PRICES = {
+    NL: { petrol: 2.341, diesel: 2.310 },
+    BE: { petrol: 1.811, diesel: 1.963 },
+    DE: { petrol: 2.101, diesel: 2.015 }
+  };
+
+  const CITIES = [
+    ["Alkmaar",52.63,4.75],["Almere",52.37,5.21],["Amersfoort",52.16,5.39],["Amsterdam",52.37,4.90],
+    ["Apeldoorn",52.21,5.97],["Arnhem",51.98,5.91],["Assen",52.99,6.56],["Bergen op Zoom",51.49,4.29],
+    ["Breda",51.59,4.78],["Den Haag",52.08,4.30],["Den Helder",52.96,4.76],["Deventer",52.25,6.16],
+    ["Dordrecht",51.81,4.67],["Eindhoven",51.44,5.47],["Emmen",52.79,6.90],["Enschede",52.22,6.89],
+    ["Groningen",53.22,6.57],["Haarlem",52.38,4.64],["Heerlen",50.89,5.98],["Helmond",51.48,5.66],
+    ["Hengelo",52.27,6.79],["'s-Hertogenbosch",51.69,5.30],["Leeuwarden",53.20,5.80],["Leiden",52.16,4.49],
+    ["Lelystad",52.52,5.47],["Maastricht",50.85,5.69],["Middelburg",51.50,3.61],["Nijmegen",51.84,5.86],
+    ["Roermond",51.19,5.99],["Roosendaal",51.53,4.46],["Rotterdam",51.92,4.48],["Sittard",51.00,5.87],
+    ["Terneuzen",51.33,3.83],["Tilburg",51.56,5.09],["Utrecht",52.09,5.12],["Venlo",51.37,6.17],
+    ["Weert",51.25,5.71],["Winterswijk",51.97,6.72],["Zwolle",52.52,6.08]
+  ];
+
+  // Pompen net over de grens, met de Nederlandse plaats waar je oversteekt.
+  const BORDER = {
+    BE: [
+      ["Meer (via Hazeldonk)",51.47,4.76],["Essen (via Roosendaal)",51.46,4.45],["Baarle-Hertog",51.44,4.93],
+      ["Poppel (via Goirle)",51.45,5.04],["Lommel (via Eindhoven)",51.23,5.31],["Achel (via Valkenswaard)",51.25,5.48],
+      ["Hamont (via Budel)",51.25,5.54],["Kinrooi (via Thorn)",51.14,5.77],["Lanaken (via Maastricht)",50.89,5.65],
+      ["Zelzate (via Sas van Gent)",51.20,3.81],["Koewacht",51.23,3.98],["Kapellen (via Putte)",51.36,4.39]
+    ],
+    DE: [
+      ["Bunde (via Nieuweschans)",53.18,7.27],["Nordhorn (via Denekamp)",52.43,7.07],["Bad Bentheim (via Oldenzaal)",52.30,7.15],
+      ["Gronau (via Enschede)",52.21,7.02],["Bocholt (via Dinxperlo)",51.84,6.55],["Emmerich (via Zevenaar)",51.84,6.24],
+      ["Kranenburg (via Nijmegen)",51.79,6.01],["Kaldenkirchen (via Venlo)",51.32,6.20],["Elmpt (via Roermond)",51.21,6.15],
+      ["Selfkant (via Sittard)",51.01,5.93],["Herzogenrath (via Kerkrade)",50.87,6.10],["Aken (via Vaals)",50.77,6.05]
+    ]
+  };
+
+  const CARS = [
+    { name: "Kleine benzineauto (bv. VW Polo, Toyota Aygo X)", fuel: "petrol", cons: 5.4, tank: 40 },
+    { name: "Compacte benzineauto (bv. VW Golf, Kia Ceed)", fuel: "petrol", cons: 6.0, tank: 50 },
+    { name: "Hybride (bv. Toyota Corolla, Yaris Cross)", fuel: "petrol", cons: 4.6, tank: 43 },
+    { name: "Middenklasse benzine (bv. Skoda Octavia)", fuel: "petrol", cons: 6.4, tank: 50 },
+    { name: "Benzine-SUV (bv. VW Tiguan, Kia Sportage)", fuel: "petrol", cons: 7.6, tank: 58 },
+    { name: "Compacte diesel (bv. Peugeot 308 BlueHDi)", fuel: "diesel", cons: 4.8, tank: 52 },
+    { name: "Diesel stationwagon (bv. VW Passat Variant TDI)", fuel: "diesel", cons: 5.3, tank: 66 },
+    { name: "Grote diesel-SUV (bv. Volvo XC90 D5)", fuel: "diesel", cons: 7.4, tank: 71 },
+    { name: "Dieselbusje (bv. VW Transporter)", fuel: "diesel", cons: 8.0, tank: 70 },
+    { name: "Eigen gegevens", fuel: null, cons: null, tank: null }
+  ];
+
+  const NAMES = { BE: "België", DE: "Duitsland" };
+  const PLATES = { BE: "B", DE: "D" };
+  const FUEL_LABEL = { petrol: "Euro 95", diesel: "diesel" };
+
+  const $ = id => document.getElementById(id);
+  const eur = (v, d = 2) => (v < 0 ? "−" : "") + "€ " + Math.abs(v).toLocaleString("nl-NL", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const nl = (v, d = 1) => v.toLocaleString("nl-NL", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const num = (el, fb = 0) => { const v = parseFloat(String(el.value).replace(",", ".")); return isFinite(v) ? v : fb; };
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  function haversine(a, b) {
+    const R = 6371, r = x => x * Math.PI / 180;
+    const dLat = r(b[0] - a[0]), dLon = r(b[1] - a[1]);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function nearest(country, from) {
+    let best = null;
+    for (const [name, lat, lon] of BORDER[country]) {
+      const d = haversine(from, [lat, lon]) * 1.3;
+      if (!best || d < best.km) best = { name, km: d };
+    }
+    return best;
+  }
+
+  CITIES.forEach(([n], i) => $("city").add(new Option(n, i)));
+  CARS.forEach((c, i) => $("car").add(new Option(c.name, i)));
+  $("priceDate").textContent = PRICE_DATE;
+
+  let fuel = "petrol";
+  let geo = null; // [lat, lon] when the visitor shared their location
+  function setFuel(f) {
+    fuel = f;
+    document.querySelectorAll("#fuelSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fuel === f)));
+  }
+  function setPrices(p) {
+    for (const c of ["NL", "BE", "DE"]) for (const f of ["petrol", "diesel"]) $(`p-${c}-${f}`).value = p[c][f].toFixed(3);
+  }
+  function geoMsg(text) { $("geoMsg").textContent = text; $("geoMsg").hidden = !text; }
+
+  // Herstel eerdere invoer (alleen in deze browser)
+  const KEY = "pompsmart-v1";
+  const saved = store.get(KEY);
+  const ids = ["city", "extraKm", "car", "cons", "tank", "fills", "level", "wear", "timeVal", "override"];
+  $("city").value = String(CITIES.findIndex(c => c[0] === "Eindhoven"));
+  $("car").value = "1";
+  setPrices(DEFAULT_PRICES);
+  if (saved) {
+    ids.forEach(id => { if (saved[id] != null && saved[id] !== "geo") $(id).value = saved[id]; });
+    if (saved.fuel) setFuel(saved.fuel);
+    // Oude opgeslagen prijzen alleen gebruiken als ze bij dezelfde startprijzen horen
+    if (saved.prices && saved.priceDate === PRICE_DATE) { try { setPrices(saved.prices); } catch (e) { setPrices(DEFAULT_PRICES); } }
+  }
+
+  function readPrices() {
+    const p = {};
+    for (const c of ["NL", "BE", "DE"]) {
+      p[c] = {};
+      for (const f of ["petrol", "diesel"]) p[c][f] = num($(`p-${c}-${f}`), DEFAULT_PRICES[c][f]);
+    }
+    return p;
+  }
+
+  function calc() {
+    const city = CITIES[+$("city").value] || CITIES[0];
+    const from = geo || [city[1], city[2]];
+    const placeName = geo ? "Jouw locatie" : city[0];
+    const cons = Math.max(0, num($("cons"), 6));
+    const tank = Math.max(0, num($("tank"), 50));
+    const level = num($("level"), 15) / 100;
+    const fills = Math.max(0, num($("fills"), 0));
+    const wear = Math.max(0, num($("wear"), 0));
+    const timeVal = Math.max(0, num($("timeVal"), 0));
+    const extra = geo ? 0 : Math.max(0, num($("extraKm"), 0));
+    const ov = $("override").value.trim() === "" ? null : Math.max(0, num($("override"), 0));
+    const prices = readPrices();
+    const litres = tank * (1 - level);
+    const pNL = prices.NL[fuel];
+
+    $("levelOut").textContent = Math.round(level * 100) + "%";
+    $("litresHint").textContent = `Je tankt ongeveer ${nl(litres)} liter per keer.`;
+
+    const results = ["BE", "DE"].map(c => {
+      const pump = nearest(c, from);
+      const oneWay = ov != null ? ov : pump.km + extra;
+      const roundTrip = oneWay * 2;
+      const pX = prices[c][fuel];
+      const gross = litres * (pNL - pX);
+      const tripFuel = roundTrip * cons / 100 * pX;
+      const wearCost = roundTrip * wear;
+      const timeCost = roundTrip / 70 * timeVal;            // gemiddeld ~70 km/u incl. lokale wegen
+      const net = gross - tripFuel - wearCost - timeCost;
+      const perKm = cons / 100 * pX + wear + timeVal / 70;
+      const breakEven = gross > 0 && perKm > 0 ? gross / perKm / 2 : 0; // max km enkele reis
+      return { c, pump, oneWay, roundTrip, pX, gross, tripFuel, wearCost, timeCost, net, breakEven, minutes: roundTrip / 70 * 60 };
+    });
+
+    const best = results.reduce((a, b) => (b.net > a.net ? b : a));
+    const worth = best.net > 0.5;
+
+    $("verdict").textContent = worth ? `Tank in ${NAMES[best.c]}` : "Tank gewoon in Nederland";
+    $("eyebrow").textContent = `${placeName} · ${FUEL_LABEL[fuel] === "diesel" ? "Diesel" : "Euro 95"} · per tankbeurt`;
+    $("bigNum").textContent = eur(best.net);
+    $("bigNum").classList.toggle("neg", !worth);
+    $("bigSub").textContent = worth
+      ? `Netto, na ${Math.round(best.roundTrip)} km heen en terug naar ${best.pump.name}.`
+      : `De beste rit (${NAMES[best.c]}) ${best.net < 0 ? "kost meer dan hij oplevert" : "levert bijna niets op"}. Tank dicht bij huis.`;
+    $("miniVerdict").textContent = $("verdict").textContent;
+    $("miniNum").textContent = $("bigNum").textContent;
+    $("minibar").classList.toggle("neg", !worth);
+    const monthly = worth ? best.net * fills : 0;
+    $("perMonth").textContent = eur(monthly, 0);
+    $("perYear").textContent = eur(monthly * 12, 0);
+
+    $("cards").innerHTML = results.map(r => {
+      const isBest = r === best && worth;
+      const diff = pNL - r.pX;
+      return `<article class="dest${isBest ? " best" : ""}">
+        <h3><span><span class="plate">${PLATES[r.c]}</span> ${NAMES[r.c]}</span>
+          <span class="tag ${r.net > 0.5 ? "yes" : "no"}">${r.net > 0.5 ? "Loont" : "Loont niet"}</span></h3>
+        <p class="where">${r.pump.name} · ${Math.round(r.oneWay)} km enkele reis · ~${Math.round(r.minutes)} min heen en terug</p>
+        <dl>
+          <dt>Prijs t.o.v. NL</dt><dd>${diff >= 0 ? "−" : "+"}${nl(Math.abs(diff * 100))} ct/l</dd>
+          <dt>Voordeel op ${nl(litres)} l</dt><dd>${eur(r.gross)}</dd>
+          <dt>Brandstof voor de rit</dt><dd>${eur(-r.tripFuel)}</dd>
+          <dt>Slijtage</dt><dd>${eur(-r.wearCost)}</dd>
+          ${r.timeCost > 0 ? `<dt>Je tijd</dt><dd>${eur(-r.timeCost)}</dd>` : ""}
+          <dt>Netto per tankbeurt</dt><dd class="net ${r.net >= 0 ? "pos" : "neg"}">${eur(r.net)}</dd>
+        </dl>
+        <p class="breakeven">${r.gross > 0
+          ? `Loont als de pomp binnen <strong>${Math.round(r.breakEven)} km</strong> enkele reis ligt.`
+          : `${NAMES[r.c]} is bij deze prijzen niet goedkoper dan Nederland voor ${FUEL_LABEL[fuel]}.`}</p>
+      </article>`;
+    }).join("");
+
+    const snap = { fuel, prices, priceDate: PRICE_DATE };
+    ids.forEach(id => snap[id] = $(id).value);
+    store.set(KEY, snap);
+  }
+
+  $("car").addEventListener("change", () => {
+    const c = CARS[+$("car").value];
+    if (c && c.cons != null) { $("cons").value = c.cons; $("tank").value = c.tank; setFuel(c.fuel); }
+    calc();
+  });
+  $("city").addEventListener("change", () => { geo = null; geoMsg(""); $("geoBtn").textContent = "Mijn locatie"; });
+  $("geoBtn").addEventListener("click", () => {
+    if (!("geolocation" in navigator)) { geoMsg("Je browser kan je locatie niet delen. Kies je woonplaats in de lijst."); return; }
+    geoMsg("Locatie ophalen…");
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        if (latitude < 50.6 || latitude > 53.7 || longitude < 3.2 || longitude > 7.3) {
+          geoMsg("Je lijkt niet in Nederland te zijn. Kies je woonplaats in de lijst.");
+          return;
+        }
+        geo = [latitude, longitude];
+        $("geoBtn").textContent = "Locatie gebruikt ✓";
+        geoMsg("Pompsmart rekent nu vanaf je huidige locatie. Kies een plaats in de lijst om terug te gaan.");
+        calc();
+      },
+      () => geoMsg("Je locatie is niet gedeeld. Kies je woonplaats in de lijst."),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
+    );
+  });
+  $("fuelSeg").addEventListener("click", e => {
+    const b = e.target.closest("button[data-fuel]");
+    if (b) { setFuel(b.dataset.fuel); calc(); }
+  });
+  ["cons", "tank"].forEach(id => $(id).addEventListener("input", () => { $("car").value = String(CARS.length - 1); }));
+  $("resetPrices").addEventListener("click", () => { setPrices(DEFAULT_PRICES); calc(); });
+  document.addEventListener("input", calc);
+  document.addEventListener("change", calc);
+  $("form").addEventListener("submit", e => e.preventDefault());
+  // Verberg de balk zodra de echte uitkomst in beeld is
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([e]) => $("minibar").classList.toggle("away", e.isIntersecting)).observe($("uitkomst"));
+  }
+  calc();
+})();
+</script>
+</body>
+</html>
