@@ -1,98 +1,137 @@
-// Haalt de officiële Belgische maximumprijzen van vandaag op bij Statbel (be.STAT),
-// zoals vastgesteld door de FOD Economie, en schrijft ze naar een JSON-bestand
-// dat index.html bij het laden ophaalt.
+// Haalt de officiële Belgische maximumprijzen op bij Statbel (be.STAT), zoals de
+// FOD Economie die elke dag vaststelt, en schrijft ze naar een JSON-bestand dat
+// index.html bij het laden ophaalt.
 //
 // Gebruik: node scripts/fetch-be-prices.mjs site/be-prijzen.json
-// Optioneel: STATBEL_VIEWS (komma-gescheiden view-id's) en STATBEL_BASE om te testen.
+// Optioneel: STATBEL_BASE en STATBEL_TODAY (JJJJ-MM-DD) om te testen.
 //
-// Het script leest de tabel zonder uit te gaan van een vaste opmaak. Een prijs telt alleen
-// als in dezelfde rij ook de prijs zonder btw staat en die precies 21% btw verschilt, zodat
-// een gewijzigde pagina nooit een verkeerd getal op de site zet.
+// Bronnen, in volgorde:
+// 1. CSV met een prijs per dag (laatste 30 dagen, anders 365 dagen). Kolommen worden
+//    op naam gezocht ("Dag", "Product", "Prijs incl. BTW"); de prijs van vandaag wint.
+// 2. De dagtabel in HTML (één dag, vaak die van morgen). Daar telt een prijs alleen als
+//    in dezelfde rij ook de prijs zonder btw staat, precies 21% lager.
+// Elke rij die gebruikt wordt, staat in de log van de workflow.
 import { writeFile } from "node:fs/promises";
 
 const BASE = process.env.STATBEL_BASE || "https://bestat.statbel.fgov.be/bestat/api/views";
-// Dagelijks officieel tarief van de aardolieproducten (NL en FR).
-const VIEWS = (process.env.STATBEL_VIEWS || "f8d4c0ce-bec4-4f58-b2a2-4f6b8667ad24,9e9cf394-6c54-4d81-8013-7124a8c4bf15").split(",");
-const FORMATS = ["HTML", "CSV"];
+const DATED_CSV_VIEWS = [
+  "ef2a5bfb-a361-47a6-b113-e3df26563404", // officieel tarief, laatste 30 dagen
+  "f8d4c0ce-bec4-4f58-b2a2-4f6b8667ad24"  // officieel tarief, laatste 365 dagen
+];
+const DAY_HTML_VIEW = "9e9cf394-6c54-4d81-8013-7124a8c4bf15"; // tarif officiel, dernier jour
 const out = process.argv[2] || "be-prijzen.json";
+const today = process.env.STATBEL_TODAY ||
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date());
 
+// Euro 95 in Nederland is E10; diesel aan de pomp is B7.
 const PRODUCTS = {
-  petrol: label => /95/.test(label) && /E\s*10/i.test(label),
-  diesel: label => /(diesel|gasoil|gazole)/i.test(label) && /B\s*7/i.test(label) && !/(verwarming|chauffage|heating|extra)/i.test(label)
+  petrol: label => /\b95\s*RON\s*E\s*10\b/i.test(label),
+  diesel: label => /^\s*Diesel\s*B\s*7\b/i.test(label)
 };
 
-const decode = t => t.replace(/&nbsp;|&#160;/g, " ").replace(/&amp;/g, "&").replace(/&euro;|&#8364;/g, "€").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-
-function rowsFromHtml(html) {
-  return [...html.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map(m =>
-    [...m[0].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map(c => decode(c[1].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim())
-  );
+const MONTHS = {
+  jan: 1, janv: 1, feb: 2, fev: 2, "fév": 2, "févr": 2, mrt: 3, maa: 3, mar: 3, mars: 3, apr: 4, avr: 4,
+  mei: 5, mai: 5, may: 5, jun: 6, juin: 6, jul: 7, juil: 7, aug: 8, aou: 8, "aoû": 8, sep: 9, sept: 9,
+  okt: 10, oct: 10, nov: 11, dec: 12, "déc": 12
+};
+// "14okt25", "13OCT26", "13/10/2026" of "2026-10-13" → "2026-10-13"
+function parseDate(text) {
+  let m = /(\d{1,2})\s*([a-zéû]{3,5})\.?\s*(\d{2}|\d{4})(?![\d])/i.exec(text);
+  if (m && MONTHS[m[2].toLowerCase()]) {
+    const y = m[3].length === 2 ? 2000 + +m[3] : +m[3];
+    return `${y}-${String(MONTHS[m[2].toLowerCase()]).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  }
+  m = /(\d{2})[\/.-](\d{2})[\/.-](\d{4})/.exec(text);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  m = /(\d{4})-(\d{2})-(\d{2})/.exec(text);
+  return m ? m[0] : null;
 }
-function rowsFromCsv(text) {
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  if (!lines.length) return [];
-  const sep = (lines[0].match(/;/g) || []).length >= (lines[0].match(/,/g) || []).length ? ";" : ",";
-  return lines.map(l => l.split(sep).map(c => c.replace(/^"|"$/g, "").trim()));
-}
 
-const num = c => {
-  const m = /^[€\s]*(-?\d{1,2}[.,]\d{2,4})\s*(€|eur|euro)?(\s*\/\s*l)?$/i.exec(c);
+const price = c => {
+  const m = /^\s*(\d{1,2}[.,]\d{2,4})\s*$/.exec(c);
   return m ? parseFloat(m[1].replace(",", ".")) : null;
 };
-const dateOf = cells => {
-  for (const c of cells) {
-    let m = /(\d{2})[\/.-](\d{2})[\/.-](\d{4})/.exec(c);
-    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-    m = /(\d{4})-(\d{2})-(\d{2})/.exec(c);
-    if (m) return m[0];
-  }
-  return null;
-};
+const sane = v => v != null && v > 1 && v < 4;
 
-// Prijs incl. btw: een getal in de rij dat 21% boven een ander getal in dezelfde rij ligt.
-function inclVat(values) {
-  for (const incl of values) for (const excl of values) {
-    if (incl > excl && Math.abs(excl * 1.21 - incl) < 0.006 && incl > 1 && incl < 4) return incl;
-  }
-  return null;
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return [];
+  const head = lines[0];
+  const sep = [";", "\t", ","].find(s => head.includes(s)) || ",";
+  return lines.map(line => {
+    const cells = []; let cur = "", q = false;
+    for (const ch of line) {
+      if (ch === '"') q = !q;
+      else if (ch === sep && !q) { cells.push(cur.trim()); cur = ""; }
+      else cur += ch;
+    }
+    cells.push(cur.trim());
+    return cells;
+  });
 }
 
-function extract(rows) {
+const decode = t => t.replace(/&nbsp;|&#160;/g, " ").replace(/&amp;/g, "&").replace(/&euro;|&#8364;/g, "€")
+  .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&eacute;/g, "é").replace(/&egrave;/g, "è");
+function parseHtml(html) {
+  return [...html.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map(m =>
+    [...m[0].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map(c => decode(c[1].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim()));
+}
+
+// Bron 1: één rij per dag en product, kolommen op naam.
+function fromDatedCsv(rows) {
+  const head = rows[0].map(h => h.toLowerCase());
+  const iDay = head.findIndex(h => /^(dag|jour|day|datum|date)$/.test(h));
+  const iProd = head.findIndex(h => /^(product|produit)$/.test(h));
+  const iPrice = head.findIndex(h => /incl|comprise|tvac|btw inbegrepen/.test(h));
+  if (iDay < 0 || iProd < 0 || iPrice < 0) throw new Error(`kolommen niet gevonden in ${JSON.stringify(rows[0])}`);
   const found = {};
-  for (const cells of rows) {
-    const label = cells.filter(c => num(c) == null).join(" ");
-    const values = cells.map(num).filter(v => v != null);
-    const date = dateOf(cells);
+  for (const r of rows.slice(1)) {
+    const date = parseDate(r[iDay] || ""), v = price(r[iPrice] || "");
+    if (!date || !sane(v) || date > today) continue;
     for (const [fuel, test] of Object.entries(PRODUCTS)) {
-      if (!test(label)) continue;
-      const price = inclVat(values);
-      if (price == null) continue;
-      // Meerdere dagen in de tabel: neem de nieuwste.
-      if (!found[fuel] || (date && (!found[fuel].date || date > found[fuel].date))) found[fuel] = { price, date };
+      if (test(r[iProd] || "") && (!found[fuel] || date > found[fuel].date)) found[fuel] = { price: v, date, row: r };
     }
   }
   return found;
 }
 
-let result = null;
-outer: for (const view of VIEWS) {
-  for (const fmt of FORMATS) {
-    const url = `${BASE}/${view}/result/${fmt}`;
-    try {
-      const res = await fetch(url, { headers: { "User-Agent": "pompsmart.nl (github.com/milanmeurs-nl/pompsmart)" } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const rows = fmt === "HTML" ? rowsFromHtml(text) : rowsFromCsv(text);
-      // Laat zien wat er gelezen is, zodat een gewijzigde opmaak in de log te zien is.
-      console.log(`${view} ${fmt}: ${rows.length} rijen, kop: ${JSON.stringify(rows.slice(0, 2)).slice(0, 400)}`);
-      rows.filter(r => /95|diesel|gasoil|gazole/i.test(r.join(" "))).slice(0, 12)
-        .forEach(r => console.log(`  ${JSON.stringify(r).slice(0, 300)}`));
-      const found = extract(rows);
-      console.log(`${view} ${fmt}: Euro 95 ${found.petrol ? found.petrol.price : "niet gevonden"}, diesel ${found.diesel ? found.diesel.price : "niet gevonden"}`);
-      if (found.petrol && found.diesel) { result = { found, url }; break outer; }
-    } catch (e) {
-      console.warn(`${url}: ${e.message}`);
+// Bron 2: dagtabel; datum uit de kop, prijs incl. btw gecontroleerd tegen de prijs zonder btw.
+function fromDayHtml(rows) {
+  const date = parseDate(rows.map(r => r.join(" ")).find(t => /(date|datum)\s*:/i.test(t)) || "");
+  const found = {};
+  for (const r of rows) {
+    const label = r.filter(c => price(c) == null).join(" ");
+    const vals = r.map(price).filter(v => v != null);
+    for (const [fuel, test] of Object.entries(PRODUCTS)) {
+      if (found[fuel] || !r.some(c => test(c))) continue;
+      const incl = vals.find(i => vals.some(e => i > e && Math.abs(e * 1.21 - i) < 0.006));
+      if (sane(incl)) found[fuel] = { price: incl, date, row: r };
     }
+  }
+  return found;
+}
+
+async function get(url) {
+  const res = await fetch(url, { headers: { "User-Agent": "pompsmart.nl (github.com/milanmeurs-nl/pompsmart)" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
+const sources = [
+  ...DATED_CSV_VIEWS.map(v => ({ url: `${BASE}/${v}/result/CSV`, read: t => fromDatedCsv(parseCsv(t)) })),
+  { url: `${BASE}/${DAY_HTML_VIEW}/result/HTML`, read: t => fromDayHtml(parseHtml(t)) }
+];
+
+let result = null;
+for (const { url, read } of sources) {
+  try {
+    const found = read(await get(url));
+    for (const f of ["petrol", "diesel"]) {
+      console.log(`${url} ${f}: ${found[f] ? `€ ${found[f].price} (${found[f].date || "geen datum"}) uit ${JSON.stringify(found[f].row)}` : "niet gevonden"}`);
+    }
+    if (found.petrol && found.diesel) { result = { found, url }; break; }
+  } catch (e) {
+    console.warn(`${url}: ${e.message}`);
   }
 }
 
@@ -103,10 +142,10 @@ if (!result) {
 const { found, url } = result;
 await writeFile(out, JSON.stringify({
   updated: new Date().toISOString(),
-  date: found.petrol.date || found.diesel.date || null,
+  date: [found.petrol.date, found.diesel.date].filter(Boolean).sort()[0] || null,
   petrol: found.petrol.price,
   diesel: found.diesel.price,
   source: "Statbel, officieel tarief van de aardolieproducten (FOD Economie)",
   url
 }, null, 2));
-console.log(`Belgische maximumprijzen: Euro 95 € ${found.petrol.price}, diesel € ${found.diesel.price}${found.petrol.date ? ` (${found.petrol.date})` : ""} → ${out}`);
+console.log(`Vandaag (${today}): Euro 95 € ${found.petrol.price}, diesel € ${found.diesel.price}, tarief van ${found.petrol.date || "onbekende datum"} → ${out}`);

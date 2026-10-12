@@ -381,6 +381,12 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
   const esc = t => String(t).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   const hhmm = d => d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
   const ddmm = iso => new Date(iso + "T12:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
+  // "van 12 oktober", of "vanaf 13 oktober" als België de prijs van morgen al heeft bekendgemaakt
+  const beWhen = () => {
+    if (!liveBE || !liveBE.date) return "";
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date());
+    return `${liveBE.date > today ? "vanaf" : "van"} ${ddmm(liveBE.date)}`;
+  };
   function liveStatus() {
     const el = $("liveStatus");
     if (!$("useLive").checked) { el.textContent = "Uit: Pompsmart rekent met de gemiddelden uit de tabel."; return; }
@@ -390,7 +396,7 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
       parts.push(`Duitsland: live, bijgewerkt om ${hhmm(new Date(liveDE.updated))} voor ${n} grensovergangen (Tankerkönig, MTS-K).`);
     } else parts.push("Duitsland: geen live prijzen, Pompsmart rekent met het gemiddelde.");
     parts.push(liveBE
-      ? `België: officiële maximumprijs${liveBE.date ? ` van ${ddmm(liveBE.date)}` : ""} (FOD Economie).`
+      ? `België: officiële maximumprijs ${beWhen()} (FOD Economie).`.replace("  ", " ")
       : "België: geen actuele maximumprijs, Pompsmart rekent met het gemiddelde.");
     el.textContent = parts.join(" ");
   }
@@ -498,7 +504,7 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
         <h3><span><span class="plate">${PLATES[r.c]}</span> ${NAMES[r.c]}</span>
           <span class="tag ${r.net > 0.5 ? "yes" : "no"}">${r.net > 0.5 ? "Loont" : "Loont niet"}</span></h3>
         <p class="where">${esc(r.pump.name)} · ${Math.round(r.oneWay)} km enkele reis · ~${Math.round(r.minutes)} min heen en terug</p>
-        ${r.beMax ? `<p class="live"><b>Max</b> Officiële maximumprijs${liveBE.date ? ` ${ddmm(liveBE.date)}` : ""}: € ${r.beMax.toFixed(3).replace(".", ",")}/l · aan de grens vaak iets lager</p>` : ""}
+        ${r.beMax ? `<p class="live"><b>Max</b> Officiële maximumprijs${liveBE.date ? ` ${beWhen()}` : ""}: € ${r.beMax.toFixed(3).replace(".", ",")}/l · aan de grens vaak iets lager</p>` : ""}
         ${r.live ? `<p class="live"><b>Live</b> ${esc([r.live.brand || r.live.name, r.live.street, r.live.place].filter(Boolean).join(", "))} · € ${r.live.price.toFixed(3).replace(".", ",")}/l${r.live.open ? "" : " · nu gesloten"}</p>` : ""}
         <dl>
           <dt>Prijs t.o.v. NL</dt><dd>${diff >= 0 ? "−" : "+"}${nl(Math.abs(diff * 100))} ct/l</dd>
