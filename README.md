@@ -44,8 +44,12 @@ Kies één van deze drie. Alle drie zijn gratis voor een site als deze en regele
 
 Nieuwe DNS-records kunnen een paar minuten tot een paar uur nodig hebben.
 
-## Privacy
+## Privacy en Google Analytics
 
-De site plaatst geen cookies en stuurt geen gegevens naar een server. Invoer wordt alleen in de browser van de bezoeker bewaard (`localStorage`). Locatie wordt alleen gevraagd als de bezoeker op **Mijn locatie** klikt, en blijft op het apparaat. Daardoor heb je geen cookiebanner nodig. Voeg je later analytics of advertenties toe, dan verandert dat.
+De site gebruikt Google Analytics (`G-16KSML5VFV`), maar laadt de Google-tag pas nadat een bezoeker in de cookiemelding op **Akkoord** klikt. Bij **Weigeren** wordt er niets naar Google gestuurd. De keuze wordt in de browser bewaard (`localStorage`, sleutel `pompsmart-consent`) en is te wijzigen via **Cookie-instellingen** onderaan de pagina.
+
+Invoer van bezoekers blijft in hun eigen browser. Locatie wordt alleen gevraagd als iemand op **Mijn locatie** klikt, en blijft op het apparaat.
+
+Zet in Google Analytics onder **Beheer → Gegevensverzameling** Google-signalen en advertentiepersonalisatie uit, en stel de bewaartermijn in op 2 maanden. Dat past bij een meting die alleen het gebruik van de site bijhoudt.
 
 Google Fonts wordt geladen vanaf Google. Wil je dat niet, download de lettertypen dan en zet ze naast `index.html`.
