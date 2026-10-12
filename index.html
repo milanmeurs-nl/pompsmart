@@ -131,6 +131,11 @@ dt { color: var(--muted); }
 dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 dd.net { font-weight: 700; font-family: var(--font-display); font-size: 1.1rem; }
 dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
+.live { margin: 0; font-size: .85rem; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.live b { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--good); }
+.livebox { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: .85rem; }
+.livebox label { flex-direction: row; align-items: center; gap: 8px; font-size: .88rem; }
+.livebox small { color: var(--muted); }
 .breakeven { font-size: .85rem; color: var(--muted); margin: 0; border-top: 1px solid var(--line); padding-top: 8px; }
 
 .prices { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; overflow-x: auto; }
@@ -263,15 +268,20 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
             <tr><td><span class="plate">D</span> Duitsland</td><td><input type="number" id="p-DE-petrol" step="0.001" inputmode="decimal" aria-label="Prijs Euro 95 Duitsland"></td><td><input type="number" id="p-DE-diesel" step="0.001" inputmode="decimal" aria-label="Prijs diesel Duitsland"></td></tr>
           </tbody>
         </table>
-        <p class="note">De startprijzen zijn landelijke gemiddelden uit de Weekly Oil Bulletin van de EU, <span id="priceDate">medio juli 2026</span>. Prijzen veranderen elke week, dus vul in wat je vandaag ziet. Kijk op <a href="https://www.fuel-prices.eu/lang/nl" target="_blank" rel="noopener">fuel-prices.eu</a> of de <a href="https://www.cbs.nl/nl-nl/cijfers/detail/80416ned" target="_blank" rel="noopener">pompprijzen van het CBS</a>. <button type="button" id="resetPrices" class="linkbtn">Prijzen herstellen</button></p>
+        <div class="livebox">
+          <label for="useLive"><input type="checkbox" id="useLive" checked> Live prijzen van Duitse grenspompen gebruiken</label>
+          <small id="liveStatus">Live prijzen laden…</small>
+        </div>
+        <p class="note">Voor Duitsland gebruikt Pompsmart de actuele prijs van de goedkoopste open pomp bij elke grensovergang, elk half uur bijgewerkt. Zonder live prijs, en voor Nederland en België, gelden landelijke gemiddelden uit de Weekly Oil Bulletin van de EU, <span id="priceDate">medio juli 2026</span>. Prijzen veranderen elke week, dus vul in wat je vandaag ziet. Kijk op <a href="https://www.fuel-prices.eu/lang/nl" target="_blank" rel="noopener">fuel-prices.eu</a> of de <a href="https://www.cbs.nl/nl-nl/cijfers/detail/80416ned" target="_blank" rel="noopener">pompprijzen van het CBS</a>. <button type="button" id="resetPrices" class="linkbtn">Prijzen herstellen</button></p>
       </div>
     </section>
   </main>
 
   <footer class="foot">
     <h2>Zo rekent Pompsmart</h2>
-    <p>De afstand is de rechte lijn van je woonplaats naar de dichtstbijzijnde pomp over de grens, keer 1,3 voor de echte route, heen en terug. De brandstof voor de rit reken je af tegen de buitenlandse prijs. Netto besparing = getankte liters × prijsverschil − brandstof voor de rit − slijtage − tijd.</p>
-    <p>Het zijn gemiddelde prijzen. Langs de snelweg betaal je meer, en pompen net over de grens zitten vaak onder het landelijk gemiddelde. In Duitsland verandert de prijs meerdere keren per dag en is tanken meestal 's avonds het goedkoopst. Ook Nederlandse pompen bij de grens zijn vaak goedkoper dan in het binnenland, dus vergelijk voordat je gaat.</p>
+    <p>De afstand is de rechte lijn van je woonplaats naar de grensovergang, keer 1,3 voor de echte route, plus de afstand tot de pomp, heen en terug. Voor Duitsland vergelijkt Pompsmart alle grensovergangen en kiest de rit die netto het meest oplevert; een iets verdere pomp kan dus winnen als hij goedkoper is. De brandstof voor de rit reken je af tegen de buitenlandse prijs. Netto besparing = getankte liters × prijsverschil − brandstof voor de rit − slijtage − tijd.</p>
+    <p>Duitse live prijzen: <a href="https://www.tankerkoenig.de" target="_blank" rel="noopener">Tankerkönig</a>, met gegevens van de Markttransparenzstelle für Kraftstoffe (MTS-K), onder licentie <a href="https://creativecommons.org/licenses/by/4.0/deed.nl" target="_blank" rel="noopener">CC BY 4.0</a>. Prijzen kunnen tussen twee updates veranderen.</p>
+    <p>Voor Nederland en België zijn het gemiddelde prijzen. Langs de snelweg betaal je meer, en pompen net over de grens zitten vaak onder het landelijk gemiddelde. In Duitsland verandert de prijs meerdere keren per dag en is tanken meestal 's avonds het goedkoopst. Ook Nederlandse pompen bij de grens zijn vaak goedkoper dan in het binnenland, dus vergelijk voordat je gaat.</p>
     <p>Brandstof in jerrycans over de grens meenemen is aan regels gebonden. Pompsmart rekent daarom alleen met wat in je tank past.</p>
     <p class="legal">Pompsmart geeft een schatting, geen garantie. Wat je invult blijft in je eigen browser en slaan we niet op een server op. Je locatie gebruiken we alleen als je daar zelf op klikt, en die verlaat je apparaat niet. Alleen als je daar akkoord voor geeft, meten we met Google Analytics hoe de site gebruikt wordt; Google plaatst daarvoor cookies. <button type="button" class="linkbtn" id="consentOpen">Cookie-instellingen</button></p>
   </footer>
@@ -356,21 +366,33 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(h));
   }
-  function nearest(country, from) {
-    let best = null;
-    for (const [name, lat, lon] of BORDER[country]) {
-      const d = haversine(from, [lat, lon]) * 1.3;
-      if (!best || d < best.km) best = { name, km: d };
-    }
-    return best;
-  }
-
   CITIES.forEach(([n], i) => $("city").add(new Option(n, i)));
   CARS.forEach((c, i) => $("car").add(new Option(c.name, i)));
   $("priceDate").textContent = PRICE_DATE;
 
   let fuel = "petrol";
   let geo = null; // [lat, lon] when the visitor shared their location
+  let liveDE = null; // { updated, points: { [grenspost]: { e5, diesel } } } van de-prijzen.json
+  const LIVE_MAX_AGE_H = 3;
+  const LIVE_FIELD = { petrol: "e5", diesel: "diesel" };
+  const esc = t => String(t).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const hhmm = d => d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+  function liveStatus() {
+    const el = $("liveStatus");
+    if (!liveDE) { el.textContent = "Geen live prijzen beschikbaar; Pompsmart rekent met het Duitse gemiddelde."; return; }
+    const n = Object.values(liveDE.points).filter(p => p && p.e5 || p && p.diesel).length;
+    el.textContent = $("useLive").checked
+      ? `Bijgewerkt om ${hhmm(new Date(liveDE.updated))} voor ${n} grensovergangen. Bron: Tankerkönig (MTS-K).`
+      : "Uit: Pompsmart rekent met het Duitse gemiddelde uit de tabel.";
+  }
+  fetch("de-prijzen.json", { cache: "no-store" })
+    .then(r => (r.ok ? r.json() : null))
+    .then(j => {
+      const age = j && j.updated ? (Date.now() - new Date(j.updated)) / 36e5 : Infinity;
+      if (j && j.points && age >= 0 && age <= LIVE_MAX_AGE_H) liveDE = j;
+    })
+    .catch(() => {})
+    .finally(() => { liveStatus(); calc(); });
   function setFuel(f) {
     fuel = f;
     document.querySelectorAll("#fuelSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fuel === f)));
@@ -390,6 +412,7 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
   if (saved) {
     ids.forEach(id => { if (saved[id] != null && saved[id] !== "geo") $(id).value = saved[id]; });
     if (saved.fuel) setFuel(saved.fuel);
+    if (typeof saved.useLive === "boolean") $("useLive").checked = saved.useLive;
     // Oude opgeslagen prijzen alleen gebruiken als ze bij dezelfde startprijzen horen
     if (saved.prices && saved.priceDate === PRICE_DATE) { try { setPrices(saved.prices); } catch (e) { setPrices(DEFAULT_PRICES); } }
   }
@@ -422,11 +445,13 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     $("levelOut").textContent = Math.round(level * 100) + "%";
     $("litresHint").textContent = `Je tankt ongeveer ${nl(litres)} liter per keer.`;
 
-    const results = ["BE", "DE"].map(c => {
-      const pump = nearest(c, from);
-      const oneWay = ov != null ? ov : pump.km + extra;
+    const useLive = $("useLive").checked && !!liveDE;
+    const results = ["BE", "DE"].map(c => BORDER[c].map(([name, lat, lon]) => {
+      const pump = { name, km: haversine(from, [lat, lon]) * 1.3 };
+      const live = c === "DE" && useLive && liveDE.points[name] ? liveDE.points[name][LIVE_FIELD[fuel]] : null;
+      const oneWay = ov != null ? ov : pump.km + extra + (live ? live.dist : 0);
       const roundTrip = oneWay * 2;
-      const pX = prices[c][fuel];
+      const pX = live ? live.price : prices[c][fuel];
       const gross = litres * (pNL - pX);
       const tripFuel = roundTrip * cons / 100 * pX;
       const wearCost = roundTrip * wear;
@@ -434,8 +459,8 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
       const net = gross - tripFuel - wearCost - timeCost;
       const perKm = cons / 100 * pX + wear + timeVal / 70;
       const breakEven = gross > 0 && perKm > 0 ? gross / perKm / 2 : 0; // max km enkele reis
-      return { c, pump, oneWay, roundTrip, pX, gross, tripFuel, wearCost, timeCost, net, breakEven, minutes: roundTrip / 70 * 60 };
-    });
+      return { c, pump, live, oneWay, roundTrip, pX, gross, tripFuel, wearCost, timeCost, net, breakEven, minutes: roundTrip / 70 * 60 };
+    }).reduce((a, b) => (b.net > a.net ? b : a)));
 
     const best = results.reduce((a, b) => (b.net > a.net ? b : a));
     const worth = best.net > 0.5;
@@ -460,7 +485,8 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
       return `<article class="dest${isBest ? " best" : ""}">
         <h3><span><span class="plate">${PLATES[r.c]}</span> ${NAMES[r.c]}</span>
           <span class="tag ${r.net > 0.5 ? "yes" : "no"}">${r.net > 0.5 ? "Loont" : "Loont niet"}</span></h3>
-        <p class="where">${r.pump.name} · ${Math.round(r.oneWay)} km enkele reis · ~${Math.round(r.minutes)} min heen en terug</p>
+        <p class="where">${esc(r.pump.name)} · ${Math.round(r.oneWay)} km enkele reis · ~${Math.round(r.minutes)} min heen en terug</p>
+        ${r.live ? `<p class="live"><b>Live</b> ${esc([r.live.brand || r.live.name, r.live.street, r.live.place].filter(Boolean).join(", "))} · € ${r.live.price.toFixed(3).replace(".", ",")}/l${r.live.open ? "" : " · nu gesloten"}</p>` : ""}
         <dl>
           <dt>Prijs t.o.v. NL</dt><dd>${diff >= 0 ? "−" : "+"}${nl(Math.abs(diff * 100))} ct/l</dd>
           <dt>Voordeel op ${nl(litres)} l</dt><dd>${eur(r.gross)}</dd>
@@ -475,7 +501,7 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
       </article>`;
     }).join("");
 
-    const snap = { fuel, prices, priceDate: PRICE_DATE };
+    const snap = { fuel, prices, priceDate: PRICE_DATE, useLive: $("useLive").checked };
     ids.forEach(id => snap[id] = $(id).value);
     store.set(KEY, snap);
   }
@@ -510,6 +536,7 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     if (b) { setFuel(b.dataset.fuel); calc(); }
   });
   ["cons", "tank"].forEach(id => $(id).addEventListener("input", () => { $("car").value = String(CARS.length - 1); }));
+  $("useLive").addEventListener("change", liveStatus);
   $("resetPrices").addEventListener("click", () => { setPrices(DEFAULT_PRICES); calc(); });
   document.addEventListener("input", calc);
   document.addEventListener("change", calc);

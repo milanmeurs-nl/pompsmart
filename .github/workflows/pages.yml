@@ -1,0 +1,53 @@
+name: Site publiceren
+
+# Publiceert de site bij elke push naar main, en elke 30 minuten opnieuw
+# met verse Duitse grensprijzen van Tankerkönig.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Site samenstellen
+        run: |
+          mkdir -p site
+          cp index.html CNAME site/
+
+      # Lukt dit niet, dan gaat de site toch online; die valt dan terug op de gemiddelde prijzen.
+      - name: Live Duitse prijzen ophalen
+        continue-on-error: true
+        env:
+          TANKERKOENIG_API_KEY: ${{ secrets.TANKERKOENIG_API_KEY }}
+        run: node scripts/fetch-de-prices.mjs site/de-prijzen.json
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

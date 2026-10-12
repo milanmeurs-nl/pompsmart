@@ -6,6 +6,28 @@ Een rekentool die laat zien of tanken in België of Duitsland loont. De hele sit
 
 - `index.html`: de site. Opmaak, rekenlogica en data staan er allemaal in.
 - `CNAME`: het domein, voor GitHub Pages. Andere hosts negeren het.
+- `scripts/fetch-de-prices.mjs` en `.github/workflows/pages.yml`: de live Duitse prijzen, zie hieronder.
+
+## Live Duitse prijzen (Tankerkönig)
+
+Voor Duitsland toont de site de actuele prijs van de goedkoopste open pomp bij elk van de 12 grensovergangen. Zo werkt het:
+
+- `.github/workflows/pages.yml` publiceert de site bij elke push naar `main`, en elke 30 minuten opnieuw.
+- Bij elke publicatie haalt `scripts/fetch-de-prices.mjs` de prijzen op bij Tankerkönig en zet ze in `de-prijzen.json` naast de site.
+- `index.html` laadt dat bestand. Ontbreekt het, of is het ouder dan 3 uur, dan rekent de site met het Duitse gemiddelde uit `DEFAULT_PRICES`.
+
+De API-sleutel staat als geheim in GitHub en komt nooit in de publieke site.
+
+**Eenmalig instellen**
+1. Vraag een gratis API-sleutel aan op https://creativecommons.tankerkoenig.de (knop *API-Key*).
+2. Zet hem in de repository onder **Settings → Secrets and variables → Actions → New repository secret**, met de naam `TANKERKOENIG_API_KEY`.
+3. Zet onder **Settings → Pages → Build and deployment → Source** de bron op **GitHub Actions**.
+4. Start de workflow één keer met de hand: **Actions → Site publiceren → Run workflow**.
+
+**Goed om te weten**
+- De gegevens vallen onder CC BY 4.0. De bronvermelding (Tankerkönig en MTS-K) staat onderaan de site; laat die staan.
+- GitHub zet geplande workflows in een publieke repository uit na 60 dagen zonder commits, en stuurt daar vooraf een mail over. Zet hem dan weer aan onder **Actions**. Tot die tijd valt de site vanzelf terug op de gemiddelden.
+- De lijst grensovergangen staat op twee plekken: `BORDER.DE` in `index.html` en `POINTS` in het script. Houd de namen gelijk.
 
 ## Prijzen bijwerken
 
