@@ -82,7 +82,12 @@ outer: for (const view of VIEWS) {
       const res = await fetch(url, { headers: { "User-Agent": "pompsmart.nl (github.com/milanmeurs-nl/pompsmart)" } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      const found = extract(fmt === "HTML" ? rowsFromHtml(text) : rowsFromCsv(text));
+      const rows = fmt === "HTML" ? rowsFromHtml(text) : rowsFromCsv(text);
+      // Laat zien wat er gelezen is, zodat een gewijzigde opmaak in de log te zien is.
+      console.log(`${view} ${fmt}: ${rows.length} rijen, kop: ${JSON.stringify(rows.slice(0, 2)).slice(0, 400)}`);
+      rows.filter(r => /95|diesel|gasoil|gazole/i.test(r.join(" "))).slice(0, 12)
+        .forEach(r => console.log(`  ${JSON.stringify(r).slice(0, 300)}`));
+      const found = extract(rows);
       console.log(`${view} ${fmt}: Euro 95 ${found.petrol ? found.petrol.price : "niet gevonden"}, diesel ${found.diesel ? found.diesel.price : "niet gevonden"}`);
       if (found.petrol && found.diesel) { result = { found, url }; break outer; }
     } catch (e) {
