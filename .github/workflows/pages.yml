@@ -1,7 +1,7 @@
 name: Site publiceren
 
 # Publiceert de site bij elke push naar main, en elke 30 minuten opnieuw
-# met verse Duitse grensprijzen van Tankerkönig.
+# met verse Duitse grensprijzen (Tankerkönig) en de Belgische maximumprijs van vandaag (Statbel).
 on:
   push:
     branches: [main]
@@ -42,6 +42,10 @@ jobs:
         env:
           TANKERKOENIG_API_KEY: ${{ secrets.TANKERKOENIG_API_KEY }}
         run: node scripts/fetch-de-prices.mjs site/de-prijzen.json
+
+      - name: Belgische maximumprijzen ophalen
+        continue-on-error: true
+        run: node scripts/fetch-be-prices.mjs site/be-prijzen.json
 
       - uses: actions/configure-pages@v5
 

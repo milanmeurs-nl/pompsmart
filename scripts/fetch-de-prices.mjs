@@ -60,7 +60,8 @@ for (const [name, lat, lng] of POINTS) {
     const res = await fetch(url, { headers: { "User-Agent": "pompsmart.nl (github.com/milanmeurs-nl/pompsmart)" } });
     const json = await res.json();
     if (!json.ok) throw new Error(json.message || `HTTP ${res.status}`);
-    points[name] = { e5: cheapest(json.stations || [], "e5"), diesel: cheapest(json.stations || [], "diesel") };
+    const st = json.stations || [];
+    points[name] = { e10: cheapest(st, "e10"), e5: cheapest(st, "e5"), diesel: cheapest(st, "diesel") };
     ok++;
   } catch (e) {
     console.warn(`${name}: ${e.message}`);

@@ -6,7 +6,7 @@ Een rekentool die laat zien of tanken in België of Duitsland loont. De hele sit
 
 - `index.html`: de site. Opmaak, rekenlogica en data staan er allemaal in.
 - `CNAME`: het domein, voor GitHub Pages. Andere hosts negeren het.
-- `scripts/fetch-de-prices.mjs` en `.github/workflows/pages.yml`: de live Duitse prijzen, zie hieronder.
+- `scripts/fetch-de-prices.mjs`, `scripts/fetch-be-prices.mjs` en `.github/workflows/pages.yml`: de actuele Duitse en Belgische prijzen, zie hieronder.
 
 ## Live Duitse prijzen (Tankerkönig)
 
@@ -28,6 +28,15 @@ De API-sleutel staat als geheim in GitHub en komt nooit in de publieke site.
 - De gegevens vallen onder CC BY 4.0. De bronvermelding (Tankerkönig en MTS-K) staat onderaan de site; laat die staan.
 - GitHub zet geplande workflows in een publieke repository uit na 60 dagen zonder commits, en stuurt daar vooraf een mail over. Zet hem dan weer aan onder **Actions**. Tot die tijd valt de site vanzelf terug op de gemiddelden.
 - De lijst grensovergangen staat op twee plekken: `BORDER.DE` in `index.html` en `POINTS` in het script. Houd de namen gelijk.
+
+## Belgische maximumprijzen (Statbel)
+
+Voor België gebruikt de site de officiële maximumprijs van vandaag voor Euro 95 (E10) en diesel (B7), zoals de FOD Economie die elke dag vaststelt. Pompen mogen niet meer vragen; aan de grens is tanken vaak iets goedkoper, en dat staat ook op de site.
+
+- `scripts/fetch-be-prices.mjs` haalt de prijzen bij elke publicatie op bij Statbel (be.STAT) en zet ze in `be-prijzen.json`. Hiervoor is geen API-sleutel nodig.
+- Het script neemt een prijs alleen over als in dezelfde rij ook de prijs zonder btw staat, met precies 21% btw verschil. Verandert Statbel de opmaak, dan komt er dus geen verkeerd getal op de site; de site rekent dan met het gemiddelde.
+- Is de maximumprijs ouder dan 3 dagen, dan rekent de site ook met het gemiddelde.
+- Werkt het niet meer, kijk dan in de log van **Actions → Site publiceren**, bij de stap *Belgische maximumprijzen ophalen*. Daar staat per bron wat er gevonden is.
 
 ## Prijzen bijwerken
 
