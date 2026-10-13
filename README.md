@@ -38,6 +38,15 @@ Voor België gebruikt de site de officiële maximumprijs van vandaag voor Euro 9
 - Is de maximumprijs ouder dan 3 dagen, dan rekent de site ook met het gemiddelde.
 - Werkt het niet meer, kijk dan in de log van **Actions → Site publiceren**, bij de stap *Belgische maximumprijzen ophalen*. Daar staat per bron wat er gevonden is.
 
+## Pagina's per grensovergang
+
+Bij elke publicatie maakt `scripts/build-pages.mjs` een pagina per grensovergang (`/tanken-duitsland/kaldenkirchen-venlo/`, `/tanken-belgie/lommel-eindhoven/` enzovoort), twee overzichtspagina's (`/tanken-duitsland/` en `/tanken-belgie/`) en de `sitemap.xml`. Op elke pagina staan de prijzen van dat moment en wat je bespaart vanuit de dichtstbijzijnde plaatsen.
+
+- De plaatsen en grensovergangen komen uit `CITIES` en `BORDER` in `index.html`. Voeg je daar een grensovergang toe, dan krijgt die vanzelf een pagina.
+- De homepage krijgt de links naar alle pagina's op de plek van `<!--GRENSPAGINAS-->`.
+- De Nederlandse gemiddelde prijs komt van het CBS (`scripts/fetch-nl-prices.mjs`, StatLine 80416ned). Het CBS publiceert met een paar dagen vertraging; ouder dan 10 dagen gebruikt de site het vaste gemiddelde.
+- `/?plaats=Venlo` opent de rekentool vanuit die plaats. De pagina's gebruiken dat voor hun links.
+
 ## Prijzen bijwerken
 
 Bovenin het `<script>` in `index.html` staan:

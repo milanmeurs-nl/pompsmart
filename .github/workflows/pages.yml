@@ -49,6 +49,15 @@ jobs:
         continue-on-error: true
         run: node scripts/fetch-be-prices.mjs site/be-prijzen.json
 
+      - name: Nederlandse gemiddelde prijs ophalen
+        continue-on-error: true
+        run: node scripts/fetch-nl-prices.mjs site/nl-prijzen.json
+
+      # Lukt dit niet, dan staat de homepage er gewoon, alleen zonder grenspagina's.
+      - name: Pagina's per grensovergang maken
+        continue-on-error: true
+        run: node scripts/build-pages.mjs site
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

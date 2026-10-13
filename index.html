@@ -226,6 +226,8 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
 .foot { margin-top: 28px; color: var(--muted); font-size: .88rem; max-width: 75ch; display: flex; flex-direction: column; gap: 6px; }
 .foot h2 { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); margin: 12px 0 0; }
 .foot p { margin: 0; }
+ul.links { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 16px; }
+ul.links a { color: var(--sign); }
 .faq h3 { font-family: var(--font-display); font-size: 1rem; color: var(--ink); margin: 10px 0 0; }
 .legal { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-size: .8rem; }
 .consent { position: fixed; z-index: 10; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 560px; margin-inline: auto;
@@ -353,10 +355,16 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
           <label for="useLive"><input type="checkbox" id="useLive" checked> Actuele prijzen gebruiken</label>
           <small id="liveStatus">Live prijzen laden…</small>
         </div>
-        <p class="note">Voor Duitsland gebruikt Pompsmart de actuele prijs van de goedkoopste open pomp bij elke grensovergang, elk half uur bijgewerkt. Voor België is dat de officiële maximumprijs van vandaag; aan de grens tanken is daar vaak iets goedkoper. Zonder actuele prijs, en voor Nederland, gelden landelijke gemiddelden uit de Weekly Oil Bulletin van de EU, <span id="priceDate">medio juli 2026</span>. Prijzen veranderen elke week, dus vul in wat je vandaag ziet. Kijk op <a href="https://www.fuel-prices.eu/lang/nl" target="_blank" rel="noopener">fuel-prices.eu</a> of de <a href="https://www.cbs.nl/nl-nl/cijfers/detail/80416ned" target="_blank" rel="noopener">pompprijzen van het CBS</a>. <button type="button" id="resetPrices" class="linkbtn">Prijzen herstellen</button></p>
+        <p class="note">Voor Duitsland gebruikt Pompsmart de actuele prijs van de goedkoopste open pomp bij elke grensovergang, elk half uur bijgewerkt. Voor België is dat de officiële maximumprijs van vandaag; aan de grens tanken is daar vaak iets goedkoper. Voor Nederland is het het landelijke gemiddelde per dag van het CBS. Zonder actuele prijs gelden de gemiddelden in deze tabel, uit de Weekly Oil Bulletin van de EU van <span id="priceDate">medio juli 2026</span>. Prijzen veranderen elke week, dus vul in wat je vandaag ziet. Kijk op <a href="https://www.fuel-prices.eu/lang/nl" target="_blank" rel="noopener">fuel-prices.eu</a> of de <a href="https://www.cbs.nl/nl-nl/cijfers/detail/80416ned" target="_blank" rel="noopener">pompprijzen van het CBS</a>. <button type="button" id="resetPrices" class="linkbtn">Prijzen herstellen</button></p>
       </div>
     </section>
   </main>
+
+  <section class="foot grens" aria-labelledby="grensTitle">
+    <h2 id="grensTitle">Prijzen per grensovergang</h2>
+    <p>Per grensplaats de prijs van vandaag en wat je bespaart vanuit de buurt.</p>
+    <ul class="links"><!--GRENSPAGINAS--></ul>
+  </section>
 
   <section class="foot faq" aria-labelledby="faqTitle">
     <h2 id="faqTitle">Veelgestelde vragen</h2>
@@ -472,6 +480,8 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
   let lastPlace = origin; // laatste plaats die geen "Mijn locatie" was, om te bewaren
   let liveDE = null; // { updated, points: { [grenspost]: { e10, e5, diesel } } } van de-prijzen.json
   let liveBE = null; // { date, petrol, diesel } van be-prijzen.json: officiële maximumprijs
+  let liveNL = null; // { date, petrol, diesel } van nl-prijzen.json: CBS-gemiddelde per dag
+  const NL_MAX_AGE_DAYS = 10; // het CBS publiceert met een paar dagen vertraging
   const LIVE_MAX_AGE_H = 3;
   const BE_MAX_AGE_DAYS = 3;
   // Nederlandse Euro 95 is E10; in Duitsland is dat Super E10, met E5 als het E10 ontbreekt.
@@ -493,18 +503,23 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
       const n = Object.values(liveDE.points).filter(p => p && (p.e10 || p.e5 || p.diesel)).length;
       parts.push(`Duitsland: live, bijgewerkt om ${hhmm(new Date(liveDE.updated))} voor ${n} grensovergangen (Tankerkönig, MTS-K).`);
     } else parts.push("Duitsland: geen live prijzen, Pompsmart rekent met het gemiddelde.");
+    parts.push(liveNL
+      ? `Nederland: gemiddelde van ${ddmm(liveNL.date)} (CBS).`
+      : "Nederland: vast gemiddelde uit de tabel.");
     parts.push(liveBE
       ? `België: officiële maximumprijs ${beWhen()} (FOD Economie).`.replace("  ", " ")
       : "België: geen actuele maximumprijs, Pompsmart rekent met het gemiddelde.");
     el.textContent = parts.join(" ");
   }
   const getJson = url => fetch(url, { cache: "no-store" }).then(r => (r.ok ? r.json() : null)).catch(() => null);
-  Promise.all([getJson("de-prijzen.json"), getJson("be-prijzen.json")]).then(([de, be]) => {
+  Promise.all([getJson("/de-prijzen.json"), getJson("/be-prijzen.json"), getJson("/nl-prijzen.json")]).then(([de, be, nl]) => {
     const hours = iso => (Date.now() - new Date(iso)) / 36e5;
     if (de && de.points && de.updated && hours(de.updated) >= 0 && hours(de.updated) <= LIVE_MAX_AGE_H) liveDE = de;
     const beAge = be && (be.date ? hours(be.date + "T00:00:00") : hours(be.updated));
     const okPrice = v => typeof v === "number" && v > 1 && v < 4;
     if (be && okPrice(be.petrol) && okPrice(be.diesel) && beAge >= -24 && beAge <= BE_MAX_AGE_DAYS * 24) liveBE = be;
+    const nlAge = nl && nl.date ? hours(nl.date + "T00:00:00") : Infinity;
+    if (nl && okPrice(nl.petrol) && okPrice(nl.diesel) && nlAge >= -24 && nlAge <= NL_MAX_AGE_DAYS * 24) liveNL = nl;
     liveStatus();
     calc();
   });
@@ -559,7 +574,7 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     const ov = $("override").value.trim() === "" ? null : Math.max(0, num($("override"), 0));
     const prices = readPrices();
     const litres = tank * (1 - level);
-    const pNL = prices.NL[fuel];
+    const pNL = $("useLive").checked && liveNL ? liveNL[fuel] : prices.NL[fuel];
 
     $("levelOut").textContent = Math.round(level * 100) + "%";
     $("litresHint").textContent = `Je tankt ongeveer ${nl(litres)} liter per keer.`;
@@ -704,6 +719,12 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
   $("place").addEventListener("focus", selectIfChosen);
   $("place").addEventListener("click", selectIfChosen);
   $("place").addEventListener("blur", () => { closeList(); $("place").value = origin.name; });
+  // Links van de grenspagina's: /?plaats=Venlo opent de rekentool vanuit die plaats
+  try {
+    const want = new URLSearchParams(location.search).get("plaats");
+    const hit = want && CITIES.find(c => fold(c[0]) === fold(want));
+    if (hit) { origin = { name: hit[0], lat: hit[1], lon: hit[2], kind: "list" }; lastPlace = origin; }
+  } catch (e) {}
   $("place").value = origin.name;
   $("geoBtn").addEventListener("click", () => {
     if (!("geolocation" in navigator)) { geoMsg("Je browser kan je locatie niet delen. Typ je woonplaats of postcode."); return; }
