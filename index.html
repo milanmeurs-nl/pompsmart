@@ -530,7 +530,20 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     if (c && c.cons != null) { $("cons").value = c.cons; $("tank").value = c.tank; setFuel(c.fuel); }
     calc();
   });
-  $("city").addEventListener("change", () => { geo = null; geoMsg(""); $("geoBtn").textContent = "Mijn locatie"; });
+  // "Mijn locatie" staat als eigen keuze bovenaan de lijst zolang die gebruikt wordt
+  function setGeoOption(on, label) {
+    let opt = $("city").querySelector('option[value="geo"]');
+    if (on) {
+      if (!opt) { opt = new Option("", "geo"); $("city").add(opt, 0); }
+      opt.textContent = label;
+      $("city").value = "geo";
+    } else if (opt) opt.remove();
+    $("extraKm").disabled = on;
+  }
+  $("city").addEventListener("change", () => {
+    if ($("city").value === "geo") return;
+    geo = null; geoMsg(""); setGeoOption(false); $("geoBtn").textContent = "Mijn locatie";
+  });
   $("geoBtn").addEventListener("click", () => {
     if (!("geolocation" in navigator)) { geoMsg("Je browser kan je locatie niet delen. Kies je woonplaats in de lijst."); return; }
     geoMsg("Locatie ophalen…");
@@ -542,6 +555,8 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
           return;
         }
         geo = [latitude, longitude];
+        const near = CITIES.reduce((a, c) => (haversine(geo, [c[1], c[2]]) < haversine(geo, [a[1], a[2]]) ? c : a));
+        setGeoOption(true, `Mijn locatie (bij ${near[0]})`);
         $("geoBtn").textContent = "Locatie gebruikt ✓";
         geoMsg("Pompsmart rekent nu vanaf je huidige locatie. Kies een plaats in de lijst om terug te gaan.");
         calc();
