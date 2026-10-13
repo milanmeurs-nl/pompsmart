@@ -92,7 +92,13 @@ input[type=number], select { font: inherit; font-weight: 400; color: var(--ink);
 input[type=range] { width: 100%; accent-color: var(--sign); }
 input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid var(--signal); outline-offset: 1px; }
 .cityrow { display: flex; gap: 8px; align-items: stretch; }
-.cityrow select { flex: 1; min-width: 0; }
+.combo { position: relative; flex: 1; min-width: 0; }
+input[type=search] { font: inherit; font-weight: 400; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; }
+#placeList { position: absolute; z-index: 6; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgb(0 0 0 / .16); max-height: 280px; overflow-y: auto; font-weight: 400; }
+#placeList li { padding: 8px 10px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+#placeList li small { color: var(--muted); white-space: nowrap; }
+#placeList li[aria-selected="true"], #placeList li:hover { background: color-mix(in srgb, var(--sign) 12%, transparent); }
+#placeList li.empty { cursor: default; color: var(--muted); background: none; }
 .ghost { font: inherit; font-size: .88rem; font-weight: 600; color: var(--sign); background: transparent; border: 1px solid var(--sign); border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
 .ghost:hover { background: color-mix(in srgb, var(--sign) 10%, transparent); }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -185,9 +191,12 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     <form class="panel" id="form" autocomplete="off">
       <fieldset>
         <legend>Waar je vertrekt</legend>
-        <div class="lbl"><label for="city">Woonplaats</label>
+        <div class="lbl"><label for="place">Woonplaats of postcode</label>
           <span class="cityrow">
-            <select id="city"></select>
+            <span class="combo">
+              <input type="search" id="place" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="placeList" autocomplete="off" spellcheck="false" placeholder="Bijvoorbeeld Doetinchem of 7001">
+              <ul id="placeList" role="listbox" aria-label="Gevonden plaatsen" hidden></ul>
+            </span>
             <button type="button" class="ghost" id="geoBtn">Mijn locatie</button>
           </span>
           <small class="hint" id="geoMsg" hidden></small>
@@ -283,7 +292,7 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     <p>Duitse live prijzen: <a href="https://www.tankerkoenig.de" target="_blank" rel="noopener">Tankerkönig</a>, met gegevens van de Markttransparenzstelle für Kraftstoffe (MTS-K), onder licentie <a href="https://creativecommons.org/licenses/by/4.0/deed.nl" target="_blank" rel="noopener">CC BY 4.0</a>. Prijzen kunnen tussen twee updates veranderen. Belgische maximumprijzen: FOD Economie, via <a href="https://bestat.statbel.fgov.be" target="_blank" rel="noopener">Statbel</a>.</p>
     <p>Voor Nederland, en voor België zonder actuele maximumprijs, zijn het gemiddelde prijzen. Langs de snelweg betaal je meer, en pompen net over de grens zitten vaak onder het landelijk gemiddelde. In Duitsland verandert de prijs meerdere keren per dag en is tanken meestal 's avonds het goedkoopst. Ook Nederlandse pompen bij de grens zijn vaak goedkoper dan in het binnenland, dus vergelijk voordat je gaat.</p>
     <p>Brandstof in jerrycans over de grens meenemen is aan regels gebonden. Pompsmart rekent daarom alleen met wat in je tank past.</p>
-    <p class="legal">Pompsmart geeft een schatting, geen garantie. Wat je invult blijft in je eigen browser en slaan we niet op een server op. Je locatie gebruiken we alleen als je daar zelf op klikt, en die verlaat je apparaat niet. Alleen als je daar akkoord voor geeft, meten we met Google Analytics hoe de site gebruikt wordt; Google plaatst daarvoor cookies. <button type="button" class="linkbtn" id="consentOpen">Cookie-instellingen</button></p>
+    <p class="legal">Pompsmart geeft een schatting, geen garantie. Wat je invult blijft in je eigen browser en slaan we niet op een server op. Je locatie gebruiken we alleen als je daar zelf op klikt, en die verlaat je apparaat niet. Zoek je een plaats of postcode, dan gaat wat je typt naar de Locatieserver van PDOK (Kadaster) om die te vinden. Alleen als je daar akkoord voor geeft, meten we met Google Analytics hoe de site gebruikt wordt; Google plaatst daarvoor cookies. <button type="button" class="linkbtn" id="consentOpen">Cookie-instellingen</button></p>
   </footer>
 </div>
 <div class="consent" id="consent" role="dialog" aria-labelledby="consentText" hidden>
@@ -366,12 +375,15 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(h));
   }
-  CITIES.forEach(([n], i) => $("city").add(new Option(n, i)));
   CARS.forEach((c, i) => $("car").add(new Option(c.name, i)));
   $("priceDate").textContent = PRICE_DATE;
 
   let fuel = "petrol";
-  let geo = null; // [lat, lon] when the visitor shared their location
+  // Vertrekpunt: een plaats uit de lijst, een zoekresultaat van PDOK of de eigen locatie.
+  // kind "geo" en "postcode" zijn al precies, daar telt "extra km vanaf het centrum" niet mee.
+  const EINDHOVEN = CITIES.find(c => c[0] === "Eindhoven");
+  let origin = { name: "Eindhoven", lat: EINDHOVEN[1], lon: EINDHOVEN[2], kind: "list" };
+  let lastPlace = origin; // laatste plaats die geen "Mijn locatie" was, om te bewaren
   let liveDE = null; // { updated, points: { [grenspost]: { e10, e5, diesel } } } van de-prijzen.json
   let liveBE = null; // { date, petrol, diesel } van be-prijzen.json: officiële maximumprijs
   const LIVE_MAX_AGE_H = 3;
@@ -422,12 +434,15 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
   // Herstel eerdere invoer (alleen in deze browser)
   const KEY = "pompsmart-v1";
   const saved = store.get(KEY);
-  const ids = ["city", "extraKm", "car", "cons", "tank", "fills", "level", "wear", "timeVal", "override"];
-  $("city").value = String(CITIES.findIndex(c => c[0] === "Eindhoven"));
+  const ids = ["extraKm", "car", "cons", "tank", "fills", "level", "wear", "timeVal", "override"];
   $("car").value = "1";
   setPrices(DEFAULT_PRICES);
   if (saved) {
-    ids.forEach(id => { if (saved[id] != null && saved[id] !== "geo") $(id).value = saved[id]; });
+    ids.forEach(id => { if (saved[id] != null) $(id).value = saved[id]; });
+    const o = saved.origin;
+    if (o && typeof o.name === "string" && isFinite(o.lat) && isFinite(o.lon) && o.kind !== "geo") origin = o;
+    else if (saved.city != null && CITIES[+saved.city]) { const c = CITIES[+saved.city]; origin = { name: c[0], lat: c[1], lon: c[2], kind: "list" }; }
+    lastPlace = origin;
     if (saved.fuel) setFuel(saved.fuel);
     if (typeof saved.useLive === "boolean") $("useLive").checked = saved.useLive;
     // Oude opgeslagen prijzen alleen gebruiken als ze bij dezelfde startprijzen horen
@@ -444,16 +459,17 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
   }
 
   function calc() {
-    const city = CITIES[+$("city").value] || CITIES[0];
-    const from = geo || [city[1], city[2]];
-    const placeName = geo ? "Jouw locatie" : city[0];
+    const from = [origin.lat, origin.lon];
+    const placeName = origin.name;
     const cons = Math.max(0, num($("cons"), 6));
     const tank = Math.max(0, num($("tank"), 50));
     const level = num($("level"), 15) / 100;
     const fills = Math.max(0, num($("fills"), 0));
     const wear = Math.max(0, num($("wear"), 0));
     const timeVal = Math.max(0, num($("timeVal"), 0));
-    const extra = geo ? 0 : Math.max(0, num($("extraKm"), 0));
+    const precise = origin.kind === "geo" || origin.kind === "postcode";
+    $("extraKm").disabled = precise;
+    const extra = precise ? 0 : Math.max(0, num($("extraKm"), 0));
     const ov = $("override").value.trim() === "" ? null : Math.max(0, num($("override"), 0));
     const prices = readPrices();
     const litres = tank * (1 - level);
@@ -520,7 +536,7 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
       </article>`;
     }).join("");
 
-    const snap = { fuel, prices, priceDate: PRICE_DATE, useLive: $("useLive").checked };
+    const snap = { fuel, prices, priceDate: PRICE_DATE, useLive: $("useLive").checked, origin: origin.kind === "geo" ? lastPlace : origin };
     ids.forEach(id => snap[id] = $(id).value);
     store.set(KEY, snap);
   }
@@ -530,38 +546,94 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
     if (c && c.cons != null) { $("cons").value = c.cons; $("tank").value = c.tank; setFuel(c.fuel); }
     calc();
   });
-  // "Mijn locatie" staat als eigen keuze bovenaan de lijst zolang die gebruikt wordt
-  function setGeoOption(on, label) {
-    let opt = $("city").querySelector('option[value="geo"]');
-    if (on) {
-      if (!opt) { opt = new Option("", "geo"); $("city").add(opt, 0); }
-      opt.textContent = label;
-      $("city").value = "geo";
-    } else if (opt) opt.remove();
-    $("extraKm").disabled = on;
+  // Zoekveld: eerst de bekende plaatsen, daarna alle woonplaatsen en postcodes via PDOK.
+  const PDOK = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
+  let options = [], active = -1, searchSeq = 0, searchTimer = null;
+  const fold = t => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  function setOrigin(o) {
+    origin = o;
+    if (o.kind !== "geo") { lastPlace = o; geoMsg(""); $("geoBtn").textContent = "Mijn locatie"; }
+    $("place").value = o.name;
+    closeList();
+    calc();
   }
-  $("city").addEventListener("change", () => {
-    if ($("city").value === "geo") return;
-    geo = null; geoMsg(""); setGeoOption(false); $("geoBtn").textContent = "Mijn locatie";
+  function closeList() { $("placeList").hidden = true; $("place").setAttribute("aria-expanded", "false"); active = -1; }
+  function render(note) {
+    const ul = $("placeList");
+    ul.innerHTML = options.length
+      ? options.map((o, i) => `<li role="option" id="opt${i}" data-i="${i}" aria-selected="${i === active}">${esc(o.label)}${o.kind === "postcode" ? "<small>postcode</small>" : ""}</li>`).join("")
+      : `<li class="empty">${esc(note || "Zoeken…")}</li>`;
+    ul.hidden = false;
+    $("place").setAttribute("aria-expanded", "true");
+    if (active >= 0) $("place").setAttribute("aria-activedescendant", `opt${active}`);
+    else $("place").removeAttribute("aria-activedescendant");
+  }
+  function point(wkt) { const m = /POINT\(([-\d.]+) ([-\d.]+)\)/.exec(wkt || ""); return m ? [+m[2], +m[1]] : null; }
+  $("place").addEventListener("input", () => {
+    const q = $("place").value.trim();
+    clearTimeout(searchTimer);
+    if (!q) { closeList(); return; }
+    const f = fold(q);
+    options = CITIES.filter(c => fold(c[0]).startsWith(f)).slice(0, 5)
+      .map(c => ({ label: c[0], name: c[0], lat: c[1], lon: c[2], kind: "list" }));
+    active = options.length ? 0 : -1;
+    render();
+    if (q.length < 2) { if (!options.length) render("Typ nog een letter of cijfer…"); return; }
+    const seq = ++searchSeq;
+    searchTimer = setTimeout(() => {
+      const url = `${PDOK}?q=${encodeURIComponent(q)}&fq=${encodeURIComponent("type:(woonplaats OR postcode)")}&fl=weergavenaam,type,centroide_ll,woonplaatsnaam,postcode,provincienaam&rows=8`;
+      fetch(url).then(r => (r.ok ? r.json() : Promise.reject())).then(j => {
+        if (seq !== searchSeq) return; // er is intussen verder getypt
+        const found = ((j.response && j.response.docs) || []).map(d => {
+          const p = point(d.centroide_ll);
+          if (!p) return null;
+          const pc = d.type === "postcode";
+          const label = !pc && d.woonplaatsnaam && d.provincienaam ? `${d.woonplaatsnaam}, ${d.provincienaam}` : d.weergavenaam;
+          return { label, name: pc ? `${d.postcode} ${d.woonplaatsnaam}` : d.woonplaatsnaam || d.weergavenaam, lat: p[0], lon: p[1], kind: pc ? "postcode" : "search" };
+        }).filter(Boolean);
+        const seen = new Set(options.map(o => fold(o.name)));
+        options = options.concat(found.filter(o => o.kind === "postcode" || !seen.has(fold(o.name)))).slice(0, 8);
+        if (active < 0 && options.length) active = 0;
+        render("Niets gevonden. Probeer een andere schrijfwijze of een postcode.");
+      }).catch(() => {
+        if (seq === searchSeq && !options.length) render("Zoeken lukt nu niet. Kies een plaats uit de lijst of gebruik Mijn locatie.");
+      });
+    }, 250);
   });
+  $("place").addEventListener("keydown", e => {
+    const open = !$("placeList").hidden && options.length;
+    if (e.key === "ArrowDown" && open) { active = (active + 1) % options.length; render(); e.preventDefault(); }
+    else if (e.key === "ArrowUp" && open) { active = (active - 1 + options.length) % options.length; render(); e.preventDefault(); }
+    else if (e.key === "Enter") { e.preventDefault(); if (open) setOrigin(options[Math.max(active, 0)]); }
+    else if (e.key === "Escape") { e.preventDefault(); closeList(); $("place").value = origin.name; $("place").select(); }
+  });
+  // mousedown in plaats van click, zodat de keuze telt voordat het veld de focus verliest
+  $("placeList").addEventListener("mousedown", e => {
+    const li = e.target.closest("li[data-i]");
+    if (li) { e.preventDefault(); setOrigin(options[+li.dataset.i]); }
+  });
+  // Staat er een gekozen plaats in het veld, dan selecteert klikken of focussen de hele tekst,
+  // zodat typen die vervangt. Dat gebeurt bij "click", na de mouseup die de selectie anders opheft.
+  const selectIfChosen = () => { if ($("place").value === origin.name) $("place").select(); };
+  $("place").addEventListener("focus", selectIfChosen);
+  $("place").addEventListener("click", selectIfChosen);
+  $("place").addEventListener("blur", () => { closeList(); $("place").value = origin.name; });
+  $("place").value = origin.name;
   $("geoBtn").addEventListener("click", () => {
-    if (!("geolocation" in navigator)) { geoMsg("Je browser kan je locatie niet delen. Kies je woonplaats in de lijst."); return; }
+    if (!("geolocation" in navigator)) { geoMsg("Je browser kan je locatie niet delen. Typ je woonplaats of postcode."); return; }
     geoMsg("Locatie ophalen…");
     navigator.geolocation.getCurrentPosition(
       pos => {
         const { latitude, longitude } = pos.coords;
         if (latitude < 50.6 || latitude > 53.7 || longitude < 3.2 || longitude > 7.3) {
-          geoMsg("Je lijkt niet in Nederland te zijn. Kies je woonplaats in de lijst.");
+          geoMsg("Je lijkt niet in Nederland te zijn. Typ je woonplaats of postcode.");
           return;
         }
-        geo = [latitude, longitude];
-        const near = CITIES.reduce((a, c) => (haversine(geo, [c[1], c[2]]) < haversine(geo, [a[1], a[2]]) ? c : a));
-        setGeoOption(true, `Mijn locatie (bij ${near[0]})`);
+        setOrigin({ name: "Mijn locatie", lat: latitude, lon: longitude, kind: "geo" });
         $("geoBtn").textContent = "Locatie gebruikt ✓";
-        geoMsg("Pompsmart rekent nu vanaf je huidige locatie. Kies een plaats in de lijst om terug te gaan.");
-        calc();
+        geoMsg("Pompsmart rekent nu vanaf je huidige locatie. Typ een plaats of postcode om dat te veranderen.");
       },
-      () => geoMsg("Je locatie is niet gedeeld. Kies je woonplaats in de lijst."),
+      () => geoMsg("Je locatie is niet gedeeld. Typ je woonplaats of postcode."),
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
     );
   });
