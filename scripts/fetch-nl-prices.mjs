@@ -28,9 +28,13 @@ async function get(url) {
   return res.json();
 }
 
+// Het CBS negeert $orderby op deze tabel (de eerste run gaf januari 2006), dus filteren we
+// op de laatste weken. Lukt dat niet, dan alles ophalen en zelf de nieuwste dag zoeken.
+const MAX_AGE_DAYS = 14;
+const cutoff = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10).replace(/-/g, "");
 const urls = [
-  `${BASE}?$orderby=Perioden%20desc&$top=10`,
-  BASE // als sorteren niet lukt: alles ophalen en zelf de nieuwste dag zoeken
+  `${BASE}?$filter=${encodeURIComponent(`Perioden ge '${cutoff}'`)}`,
+  BASE
 ];
 
 let result = null;
@@ -51,6 +55,8 @@ for (const url of urls) {
       if (!best || date > best.date) best = { date, petrol: r[kPetrol], diesel: r[kDiesel], row: r };
     }
     if (!best) throw new Error("geen dag met geldige prijzen");
+    const ageDays = (Date.now() - new Date(best.date + "T00:00:00Z")) / 864e5;
+    if (ageDays > MAX_AGE_DAYS) throw new Error(`nieuwste dag is ${best.date}, te oud`);
     console.log(`Gebruikt: ${JSON.stringify(best.row)}`);
     result = best;
     break;
