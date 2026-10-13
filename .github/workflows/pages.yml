@@ -34,7 +34,9 @@ jobs:
       - name: Site samenstellen
         run: |
           mkdir -p site
-          cp index.html CNAME site/
+          cp index.html CNAME robots.txt og-image.png site/
+          # De prijzen veranderen bij elke publicatie, dus de sitemap krijgt de datum van vandaag
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://pompsmart.nl/</loc><lastmod>%s</lastmod></url>\n</urlset>\n' "$(date -u +%Y-%m-%d)" > site/sitemap.xml
 
       # Lukt dit niet, dan gaat de site toch online; die valt dan terug op de gemiddelde prijzen.
       - name: Live Duitse prijzen ophalen
