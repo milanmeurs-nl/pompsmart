@@ -267,7 +267,9 @@ function crossingPage(x) {
     .map(o => `<li><a href="${o.url}">${esc(o.via ? `${o.place} (bij ${o.via})` : o.place)}</a></li>`).join("");
 
   const title = `Tanken in ${x.place}${x.via ? ` (bij ${x.via})` : ""}: prijs vandaag | Pompsmart`;
-  const description = `Actuele prijs voor Euro 95 en diesel in ${x.place}, ${where}. Zie wat je bespaart vanuit ${towns.slice(0, 3).map(t => t[0]).join(", ") || "Nederland"}, na de kosten van de rit.`;
+  // Google toont ongeveer 160 tekens; neem zoveel plaatsen als daarin passen.
+  const describe = n => `Actuele prijs voor Euro 95 en diesel in ${x.place}, ${where}. Zie wat je bespaart vanuit ${towns.slice(0, n).map(t => t[0]).join(", ") || "Nederland"}, na de kosten van de rit.`;
+  const description = [3, 2, 1].map(describe).find(d => d.length <= 160) || describe(1);
 
   const body = `
   <section>
@@ -326,7 +328,7 @@ function overviewPage(c) {
     : (liveBE
       ? `In België geldt vandaag een maximumprijs van ${euro(liveBE.petrol)} voor Euro 95 en ${euro(liveBE.diesel)} voor diesel. In Nederland kost Euro 95 gemiddeld ${euro(NL.petrol)} en diesel ${euro(NL.diesel)}. Onbemande pompen vlak over de grens zitten vaak iets onder de maximumprijs.`
       : `De Belgische maximumprijs van vandaag is nu niet beschikbaar; de tabel toont het Belgische gemiddelde van ${PRICE_DATE}.`);
-  const title = c === "DE" ? "Goedkoop tanken in Duitsland aan de grens: prijzen vandaag | Pompsmart" : "Tanken in België aan de grens: maximumprijs vandaag | Pompsmart";
+  const title = c === "DE" ? "Goedkoop tanken in Duitsland aan de grens | Pompsmart" : "Tanken in België aan de grens: maximumprijs vandaag | Pompsmart";
   const description = c === "DE"
     ? "De prijs voor Euro 95 en diesel bij alle Duitse grensovergangen vanuit Nederland, elk half uur bijgewerkt. Zie waar tanken in Duitsland het goedkoopst is."
     : "De Belgische maximumprijs voor Euro 95 en diesel van vandaag, en wat je bespaart bij de grensovergangen vanuit Nederland.";
