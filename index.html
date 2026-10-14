@@ -78,6 +78,38 @@
      "@type": "Answer",
      "text": "Nederlandse Euro 95 is E10. In België heet dat Benzine 95 E10 en in Duitsland Super E10. Daarmee vergelijkt Pompsmart. Twijfel je of je auto E10 mag tanken, kijk dan in het instructieboekje of vraag het je dealer."
     }
+   },
+   {
+    "@type": "Question",
+    "name": "Hoeveel bespaar ik als ik in België of Duitsland tank?",
+    "acceptedAnswer": {
+     "@type": "Answer",
+     "text": "Dat hangt af van het prijsverschil, hoeveel je tankt en hoe ver je rijdt. Bij 30 cent per liter verschil en 40 liter tanken scheelt het € 12. Een rit van 20 kilometer heen en 20 terug kost een compacte benzineauto ongeveer € 6 aan brandstof en slijtage, dan hou je zo'n € 6 over. Vul in de rekentool je eigen woonplaats en auto in voor het precieze bedrag."
+    }
+   },
+   {
+    "@type": "Question",
+    "name": "Waar is tanken over de grens vandaag het goedkoopst?",
+    "acceptedAnswer": {
+     "@type": "Answer",
+     "text": "Dat verschilt per dag en per uur. Op de pagina Tanken in Duitsland staan alle Duitse grensovergangen gesorteerd op de prijs van de goedkoopste open pomp, elk half uur bijgewerkt. In België geldt overal dezelfde maximumprijs, dus daar telt vooral de afstand vanaf je huis."
+    }
+   },
+   {
+    "@type": "Question",
+    "name": "Is diesel in België goedkoper dan in Nederland?",
+    "acceptedAnswer": {
+     "@type": "Answer",
+     "text": "Niet altijd. De Belgische maximumprijs voor diesel ligt soms ruim onder het Nederlandse gemiddelde en soms er vlak onder of zelfs boven. Pompsmart vergelijkt de prijzen elke dag; op de pagina Tanken in België zie je het verschil van vandaag."
+    }
+   },
+   {
+    "@type": "Question",
+    "name": "Hoe actueel zijn de prijzen op Pompsmart?",
+    "acceptedAnswer": {
+     "@type": "Answer",
+     "text": "De Duitse prijzen komen elk half uur van Tankerkönig, met gegevens van de Duitse Markttransparenzstelle für Kraftstoffe. De Belgische maximumprijs wordt elke dag vastgesteld door de FOD Economie. Het Nederlandse gemiddelde komt van het CBS en loopt een paar dagen achter."
+    }
    }
   ]
  }
@@ -226,6 +258,12 @@ dd.net.pos { color: var(--good); } dd.net.neg { color: var(--bad); }
 .foot { margin-top: 28px; color: var(--muted); font-size: .88rem; max-width: 75ch; display: flex; flex-direction: column; gap: 6px; }
 .foot h2 { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); margin: 12px 0 0; }
 .foot p { margin: 0; }
+.todaywrap { overflow-x: auto; margin-top: 6px; }
+table.today { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .88rem; }
+table.today th, table.today td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+table.today th { font-family: var(--font-display); font-weight: 600; font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; }
+table.today .num { text-align: right; white-space: nowrap; }
+table.today th { white-space: nowrap; }
 ul.links { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 16px; }
 ul.links a { color: var(--sign); }
 .faq h3 { font-family: var(--font-display); font-size: 1rem; color: var(--ink); margin: 10px 0 0; }
@@ -360,6 +398,8 @@ ul.links a { color: var(--sign); }
     </section>
   </main>
 
+  <!--PRIJZEN-VANDAAG-->
+
   <section class="foot grens" aria-labelledby="grensTitle">
     <h2 id="grensTitle">Prijzen per grensovergang</h2>
     <p>Per grensplaats de prijs van vandaag en wat je bespaart vanuit de buurt.</p>
@@ -378,6 +418,14 @@ ul.links a { color: var(--sign); }
     <p>De Belgische overheid (FOD Economie) stelt elke dag een maximumprijs vast voor benzine en diesel. Pompen mogen niet meer vragen. Onbemande pompen, ook die vlak over de grens, zitten er vaak iets onder.</p>
     <h3>Welke benzine is hetzelfde als Euro 95?</h3>
     <p>Nederlandse Euro 95 is E10. In België heet dat Benzine 95 E10 en in Duitsland Super E10. Daarmee vergelijkt Pompsmart. Twijfel je of je auto E10 mag tanken, kijk dan in het instructieboekje of vraag het je dealer.</p>
+    <h3>Hoeveel bespaar ik als ik in België of Duitsland tank?</h3>
+    <p>Dat hangt af van het prijsverschil, hoeveel je tankt en hoe ver je rijdt. Bij 30 cent per liter verschil en 40 liter tanken scheelt het € 12. Een rit van 20 kilometer heen en 20 terug kost een compacte benzineauto ongeveer € 6 aan brandstof en slijtage, dan hou je zo'n € 6 over. Vul in de rekentool je eigen woonplaats en auto in voor het precieze bedrag.</p>
+    <h3>Waar is tanken over de grens vandaag het goedkoopst?</h3>
+    <p>Dat verschilt per dag en per uur. Op de pagina Tanken in Duitsland staan alle Duitse grensovergangen gesorteerd op de prijs van de goedkoopste open pomp, elk half uur bijgewerkt. In België geldt overal dezelfde maximumprijs, dus daar telt vooral de afstand vanaf je huis.</p>
+    <h3>Is diesel in België goedkoper dan in Nederland?</h3>
+    <p>Niet altijd. De Belgische maximumprijs voor diesel ligt soms ruim onder het Nederlandse gemiddelde en soms er vlak onder of zelfs boven. Pompsmart vergelijkt de prijzen elke dag; op de pagina Tanken in België zie je het verschil van vandaag.</p>
+    <h3>Hoe actueel zijn de prijzen op Pompsmart?</h3>
+    <p>De Duitse prijzen komen elk half uur van Tankerkönig, met gegevens van de Duitse Markttransparenzstelle für Kraftstoffe. De Belgische maximumprijs wordt elke dag vastgesteld door de FOD Economie. Het Nederlandse gemiddelde komt van het CBS en loopt een paar dagen achter.</p>
   </section>
 
   <footer class="foot">

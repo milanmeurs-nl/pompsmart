@@ -368,12 +368,77 @@ for (const x of crossings) {
 }
 for (const c of ["DE", "BE"]) await writeFile(join(SITE, COUNTRY[c].dir, "index.html"), overviewPage(c));
 
-// Links op de homepage, op de plek van <!--GRENSPAGINAS-->
+// ---------- feiten van vandaag, voor de homepage en llms.txt ----------
+// Gewone zinnen met datum en bron: die kunnen zoekmachines en AI-assistenten lezen en citeren
+// zonder JavaScript uit te voeren.
+const todayNl = now.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
+const cheapestDE = fuel => {
+  const list = crossings.filter(x => x.c === "DE").map(x => ({ x, p: priceFor(x, fuel) })).filter(o => o.p.live);
+  return list.length ? list.reduce((a, b) => (b.p.value < a.p.value ? b : a)) : null;
+};
+const deP = cheapestDE("petrol"), deD = cheapestDE("diesel");
+const nlSrc = liveNL ? `gemiddelde volgens het CBS van ${dateNl(liveNL.date)}` : `gemiddelde van ${PRICE_DATE}`;
+const facts = [];
+facts.push(`Euro 95 kost in Nederland ${euro(NL.petrol)} per liter en diesel ${euro(NL.diesel)} (${nlSrc}).`);
+if (liveBE) facts.push(`In België mag een pomp${liveBE.date ? ` op ${dateNl(liveBE.date)}` : ""} hoogstens ${euro(liveBE.petrol)} vragen voor Euro 95 en ${euro(liveBE.diesel)} voor diesel (officiële maximumprijs, FOD Economie).`);
+if (deP) facts.push(`Bij de Duitse grens is Euro 95 (Super E10) nu het goedkoopst in ${deP.x.place}${deP.x.via ? ` (bij ${deP.x.via})` : ""}: ${euro(deP.p.value)}, bijgewerkt om ${timeNl(liveDE.updated)}.`);
+if (deD) facts.push(`Diesel is bij de Duitse grens nu het goedkoopst in ${deD.x.place}${deD.x.via ? ` (bij ${deD.x.via})` : ""}: ${euro(deD.p.value)}.`);
+const rowsToday = [
+  ["Nederland, gemiddeld", NL.petrol, NL.diesel, liveNL ? `CBS, ${dateNl(liveNL.date)}` : `vast gemiddelde, ${PRICE_DATE}`],
+  liveBE && ["België, maximumprijs", liveBE.petrol, liveBE.diesel, `FOD Economie${liveBE.date ? `, ${dateNl(liveBE.date)}` : ""}`],
+  deP && deD && ["Duitse grens, goedkoopste pomp", deP.p.value, deD.p.value, `Tankerkönig, ${timeNl(liveDE.updated)}`]
+].filter(Boolean);
+const todaySection = `<section class="foot vandaag" aria-labelledby="vandaagTitle">
+    <h2 id="vandaagTitle">Brandstofprijzen op ${esc(todayNl)}</h2>
+    ${facts.map(f => `<p>${esc(f)}</p>`).join("\n    ")}
+    <div class="todaywrap"><table class="today">
+      <thead><tr><th>Waar</th><th class="num">Euro 95</th><th class="num">Diesel</th><th>Bron</th></tr></thead>
+      <tbody>${rowsToday.map(r => `<tr><td>${esc(r[0])}</td><td class="num">${euro(r[1])}</td><td class="num">${euro(r[2])}</td><td>${esc(r[3])}</td></tr>`).join("")}</tbody>
+    </table></div>
+  </section>`;
+
+// Links en prijzen op de homepage, op de plek van de plaatshouders
 const linkList = ["DE", "BE"].map(c => `<li><a href="/${COUNTRY[c].dir}/"><strong>Tanken in ${COUNTRY[c].name}</strong></a></li>` +
   crossings.filter(x => x.c === c).map(x => `<li><span class="plate">${COUNTRY[c].plate}</span><a href="${x.url}">${esc(x.via ? `${x.place} (bij ${x.via})` : x.place)}</a></li>`).join("")).join("");
-if (indexHtml.includes("<!--GRENSPAGINAS-->")) {
-  await writeFile(join(SITE, "index.html"), indexHtml.replace("<!--GRENSPAGINAS-->", linkList));
-}
+await writeFile(join(SITE, "index.html"), indexHtml
+  .replace("<!--GRENSPAGINAS-->", linkList)
+  .replace("<!--PRIJZEN-VANDAAG-->", todaySection));
+
+// llms.txt (voorstel van llmstxt.org): wat de site is, de feiten van vandaag en alle pagina's
+const pageLine = x => `- [Tanken in ${x.place}${x.via ? ` (bij ${x.via})` : ""}](${ORIGIN}${x.url}): ${(() => {
+  const p = priceFor(x, "petrol"), d = priceFor(x, "diesel");
+  return x.c === "DE"
+    ? (p.live ? `Euro 95 ${euro(p.value)}, diesel ${euro(d.value)} bij de goedkoopste open pomp` : "prijs per grensovergang")
+    : (p.live ? `Belgische maximumprijs: Euro 95 ${euro(p.value)}, diesel ${euro(d.value)}` : "tanken in België");
+})()}`;
+await writeFile(join(SITE, "llms.txt"), `# Pompsmart
+
+> Pompsmart (pompsmart.nl) is een gratis Nederlandse rekentool die laat zien of tanken in België of Duitsland loont voor Nederlandse automobilisten, na aftrek van brandstof, slijtage en tijd voor de rit naar de grens.
+
+De site gebruikt actuele prijzen: voor Duitsland de goedkoopste open pomp bij 12 grensovergangen (Tankerkönig, gegevens van de MTS-K, CC BY 4.0, elk half uur), voor België de officiële maximumprijs van de FOD Economie (dagelijks, via Statbel) en voor Nederland het daggemiddelde van het CBS. Bezoekers vullen hun woonplaats of postcode en hun auto in; de rekentool vergelijkt alle grensovergangen.
+
+## Prijzen op ${todayNl}
+
+${facts.map(f => `- ${f}`).join("\n")}
+
+## Hoofdpagina's
+
+- [Rekentool](${ORIGIN}/): bereken voor je eigen woonplaats en auto of tanken over de grens loont
+- [Tanken in Duitsland](${ORIGIN}/tanken-duitsland/): alle Duitse grensovergangen, goedkoopste eerst
+- [Tanken in België](${ORIGIN}/tanken-belgie/): de Belgische maximumprijs van vandaag en de grensovergangen
+
+## Duitse grensovergangen
+
+${crossings.filter(x => x.c === "DE").map(pageLine).join("\n")}
+
+## Belgische grensovergangen
+
+${crossings.filter(x => x.c === "BE").map(pageLine).join("\n")}
+
+## Optional
+
+- [Sitemap](${ORIGIN}/sitemap.xml)
+`);
 
 const today = now.toISOString().slice(0, 10);
 const urls = ["/", ...["DE", "BE"].map(c => `/${COUNTRY[c].dir}/`), ...crossings.map(x => x.url)];
@@ -383,4 +448,4 @@ ${urls.map(u => `  <url><loc>${ORIGIN}${u}</loc><lastmod>${today}</lastmod></url
 </urlset>
 `);
 
-console.log(`${crossings.length} grenspagina's en 2 overzichten gemaakt. Prijzen: Duitsland ${liveDE ? "live" : "gemiddelde"}, België ${liveBE ? "maximumprijs" : "gemiddelde"}, Nederland ${liveNL ? `CBS ${liveNL.date}` : "vast gemiddelde"}.`);
+console.log(`${crossings.length} grenspagina's, 2 overzichten en llms.txt gemaakt. Prijzen: Duitsland ${liveDE ? "live" : "gemiddelde"}, België ${liveBE ? "maximumprijs" : "gemiddelde"}, Nederland ${liveNL ? `CBS ${liveNL.date}` : "vast gemiddelde"}.`);

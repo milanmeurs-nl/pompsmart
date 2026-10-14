@@ -47,6 +47,13 @@ Bij elke publicatie maakt `scripts/build-pages.mjs` een pagina per grensovergang
 - De Nederlandse gemiddelde prijs komt van het CBS (`scripts/fetch-nl-prices.mjs`, StatLine 80416ned). Het CBS publiceert met een paar dagen vertraging; ouder dan 10 dagen gebruikt de site het vaste gemiddelde.
 - `/?plaats=Venlo` opent de rekentool vanuit die plaats. De pagina's gebruiken dat voor hun links.
 
+## Vindbaar voor zoekmachines en AI-assistenten
+
+- Bij elke publicatie zet `scripts/build-pages.mjs` op de homepage, op de plek van `<!--PRIJZEN-VANDAAG-->`, een blok "Brandstofprijzen op …" met de prijzen van dat moment in gewone zinnen, met datum en bron. Zoekmachines en AI-assistenten kunnen die lezen zonder JavaScript uit te voeren.
+- Ook komt er een `llms.txt` (voorstel van llmstxt.org): een korte uitleg van de site, de prijzen van vandaag en alle pagina's.
+- `robots.txt` laat alle crawlers toe, ook die van AI-diensten (GPTBot, ClaudeBot, PerplexityBot, Google-Extended).
+- Meld de site ook aan bij Bing Webmaster Tools (importeren vanuit Google Search Console): ChatGPT en Copilot zoeken via Bing.
+
 ## Prijzen bijwerken
 
 Bovenin het `<script>` in `index.html` staan:
