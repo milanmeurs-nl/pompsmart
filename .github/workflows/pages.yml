@@ -35,6 +35,8 @@ jobs:
         run: |
           mkdir -p site
           cp index.html CNAME robots.txt og-image.png site/
+          # IndexNow-sleutelbestand (zie scripts/indexnow.mjs)
+          cp [0-9a-f]*.txt site/
           # De prijzen veranderen bij elke publicatie, dus de sitemap krijgt de datum van vandaag
           printf '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://pompsmart.nl/</loc><lastmod>%s</lastmod></url>\n</urlset>\n' "$(date -u +%Y-%m-%d)" > site/sitemap.xml
 

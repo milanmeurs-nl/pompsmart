@@ -1,0 +1,22 @@
+name: IndexNow melden
+
+# Eén keer per dag alle pagina's bij IndexNow melden (Bing en anderen), omdat de
+# prijzen erop elke dag veranderen. Vaker melden zien zoekmachines niet graag.
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  melden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Pagina's melden bij IndexNow
+        run: node scripts/indexnow.mjs

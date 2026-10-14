@@ -53,6 +53,7 @@ Bij elke publicatie maakt `scripts/build-pages.mjs` een pagina per grensovergang
 - Ook komt er een `llms.txt` (voorstel van llmstxt.org): een korte uitleg van de site, de prijzen van vandaag en alle pagina's.
 - `robots.txt` laat alle crawlers toe, ook die van AI-diensten (GPTBot, ClaudeBot, PerplexityBot, Google-Extended).
 - Meld de site ook aan bij Bing Webmaster Tools (importeren vanuit Google Search Console): ChatGPT en Copilot zoeken via Bing.
+- IndexNow: `.github/workflows/indexnow.yml` meldt elke ochtend alle pagina's uit de sitemap bij IndexNow (Bing, Yandex en andere), omdat de prijzen erop dagelijks veranderen. Het sleutelbestand (32 tekens hexadecimaal + `.txt`) staat in de root en wordt mee gepubliceerd; die sleutel is bedoeld om openbaar te zijn. Verwijder of hernoem het bestand niet, anders weigert IndexNow de meldingen.
 
 ## Prijzen bijwerken
 
