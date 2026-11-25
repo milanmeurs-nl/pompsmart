@@ -33,7 +33,7 @@ const okPrice = v => typeof v === "number" && v > 1 && v < 4;
 const deRaw = await readJson("de-prijzen.json");
 const beRaw = await readJson("be-prijzen.json");
 const nlRaw = await readJson("nl-prijzen.json");
-const liveDE = deRaw && deRaw.points && hoursOld(deRaw.updated) <= 3 ? deRaw : null;
+const liveDE = deRaw && deRaw.points && hoursOld(deRaw.updated) <= 12 ? deRaw : null;
 const liveBE = beRaw && okPrice(beRaw.petrol) && okPrice(beRaw.diesel) &&
   hoursOld((beRaw.date || beRaw.updated.slice(0, 10)) + "T00:00:00") <= 72 ? beRaw : null;
 const liveNL = nlRaw && okPrice(nlRaw.petrol) && okPrice(nlRaw.diesel) &&
@@ -47,6 +47,8 @@ const cents = v => Math.abs(v * 100).toFixed(1).replace(".", ",");
 const slugify = t => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const dateNl = iso => new Date(iso + "T12:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" });
 const timeNl = iso => new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
+// Altijd met datum: een pagina wordt ook uren na het bouwen nog gelezen.
+const whenNl = iso => `op ${new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" })} om ${timeNl(iso)}`;
 function haversine(a, b) {
   const R = 6371, r = x => x * Math.PI / 180;
   const dLat = r(b[0] - a[0]), dLon = r(b[1] - a[1]);
@@ -227,7 +229,7 @@ function priceCard(x, fuel) {
   let source;
   if (x.c === "DE" && p.station) {
     const st = p.station;
-    source = `${esc([st.brand || st.name, st.street, st.place].filter(Boolean).join(", "))}${st.open ? "" : " (nu gesloten)"} · bijgewerkt om ${timeNl(liveDE.updated)}`;
+    source = `${esc([st.brand || st.name, st.street, st.place].filter(Boolean).join(", "))}${st.open ? "" : " (nu gesloten)"} · bijgewerkt ${whenNl(liveDE.updated)}`;
   } else if (x.c === "BE" && p.live) {
     source = `officiële maximumprijs${liveBE.date ? ` van ${dateNl(liveBE.date)}` : ""}; aan de grens vaak iets lager`;
   } else {
@@ -323,7 +325,7 @@ function overviewPage(c) {
   const cheapest = list[0];
   const intro = c === "DE"
     ? (liveDE
-      ? `Vandaag tank je bij de ${list.length} grensovergangen naar Duitsland Euro 95 (Super E10) vanaf ${euro(cheapest.p.value)}, in ${cheapest.x.place}. In Nederland kost het gemiddeld ${euro(NL.petrol)}. De prijzen zijn van de goedkoopste open pomp bij elke grensovergang, bijgewerkt om ${timeNl(liveDE.updated)}.`
+      ? `Vandaag tank je bij de ${list.length} grensovergangen naar Duitsland Euro 95 (Super E10) vanaf ${euro(cheapest.p.value)}, in ${cheapest.x.place}. In Nederland kost het gemiddeld ${euro(NL.petrol)}. De prijzen zijn van de goedkoopste open pomp bij elke grensovergang, bijgewerkt ${whenNl(liveDE.updated)}.`
       : `Actuele Duitse prijzen zijn nu niet beschikbaar; de tabel toont het Duitse gemiddelde van ${PRICE_DATE}.`)
     : (liveBE
       ? `In België geldt vandaag een maximumprijs van ${euro(liveBE.petrol)} voor Euro 95 en ${euro(liveBE.diesel)} voor diesel. In Nederland kost Euro 95 gemiddeld ${euro(NL.petrol)} en diesel ${euro(NL.diesel)}. Onbemande pompen vlak over de grens zitten vaak iets onder de maximumprijs.`
@@ -381,12 +383,12 @@ const nlSrc = liveNL ? `gemiddelde volgens het CBS van ${dateNl(liveNL.date)}` :
 const facts = [];
 facts.push(`Euro 95 kost in Nederland ${euro(NL.petrol)} per liter en diesel ${euro(NL.diesel)} (${nlSrc}).`);
 if (liveBE) facts.push(`In België mag een pomp${liveBE.date ? ` op ${dateNl(liveBE.date)}` : ""} hoogstens ${euro(liveBE.petrol)} vragen voor Euro 95 en ${euro(liveBE.diesel)} voor diesel (officiële maximumprijs, FOD Economie).`);
-if (deP) facts.push(`Bij de Duitse grens is Euro 95 (Super E10) nu het goedkoopst in ${deP.x.place}${deP.x.via ? ` (bij ${deP.x.via})` : ""}: ${euro(deP.p.value)}, bijgewerkt om ${timeNl(liveDE.updated)}.`);
-if (deD) facts.push(`Diesel is bij de Duitse grens nu het goedkoopst in ${deD.x.place}${deD.x.via ? ` (bij ${deD.x.via})` : ""}: ${euro(deD.p.value)}.`);
+if (deP) facts.push(`Bij de Duitse grens is Euro 95 (Super E10) het goedkoopst in ${deP.x.place}${deP.x.via ? ` (bij ${deP.x.via})` : ""}: ${euro(deP.p.value)}, bijgewerkt ${whenNl(liveDE.updated)}.`);
+if (deD) facts.push(`Diesel is bij de Duitse grens het goedkoopst in ${deD.x.place}${deD.x.via ? ` (bij ${deD.x.via})` : ""}: ${euro(deD.p.value)}.`);
 const rowsToday = [
   ["Nederland, gemiddeld", NL.petrol, NL.diesel, liveNL ? `CBS, ${dateNl(liveNL.date)}` : `vast gemiddelde, ${PRICE_DATE}`],
   liveBE && ["België, maximumprijs", liveBE.petrol, liveBE.diesel, `FOD Economie${liveBE.date ? `, ${dateNl(liveBE.date)}` : ""}`],
-  deP && deD && ["Duitse grens, goedkoopste pomp", deP.p.value, deD.p.value, `Tankerkönig, ${timeNl(liveDE.updated)}`]
+  deP && deD && ["Duitse grens, goedkoopste pomp", deP.p.value, deD.p.value, `Tankerkönig, ${whenNl(liveDE.updated).replace(/^op /, "")}`]
 ].filter(Boolean);
 const todaySection = `<section class="foot vandaag" aria-labelledby="vandaagTitle">
     <h2 id="vandaagTitle">Brandstofprijzen op ${esc(todayNl)}</h2>

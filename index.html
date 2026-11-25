@@ -530,13 +530,18 @@ ul.links a { color: var(--sign); }
   let liveBE = null; // { date, petrol, diesel } van be-prijzen.json: officiële maximumprijs
   let liveNL = null; // { date, petrol, diesel } van nl-prijzen.json: CBS-gemiddelde per dag
   const NL_MAX_AGE_DAYS = 10; // het CBS publiceert met een paar dagen vertraging
-  const LIVE_MAX_AGE_H = 3;
+  const LIVE_MAX_AGE_H = 12; // GitHub start geplande runs niet altijd op tijd; de tijd van de update staat erbij
   const BE_MAX_AGE_DAYS = 3;
   // Nederlandse Euro 95 is E10; in Duitsland is dat Super E10, met E5 als het E10 ontbreekt.
   const liveDEPrice = p => (fuel === "diesel" ? p.diesel : p.e10 || p.e5);
   const esc = t => String(t).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   const hhmm = d => d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
   const ddmm = iso => new Date(iso + "T12:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
+  // "om 12:50" als de Duitse prijzen van vandaag zijn, anders "op 24 november om 18:49"
+  const deWhen = () => {
+    const d = new Date(liveDE.updated), day = x => x.toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
+    return day(d) === day(new Date()) ? `om ${hhmm(d)}` : `op ${day(d)} om ${hhmm(d)}`;
+  };
   // "van 12 oktober", of "vanaf 13 oktober" als België de prijs van morgen al heeft bekendgemaakt
   const beWhen = () => {
     if (!liveBE || !liveBE.date) return "";
@@ -549,7 +554,7 @@ ul.links a { color: var(--sign); }
     const parts = [];
     if (liveDE) {
       const n = Object.values(liveDE.points).filter(p => p && (p.e10 || p.e5 || p.diesel)).length;
-      parts.push(`Duitsland: live, bijgewerkt om ${hhmm(new Date(liveDE.updated))} voor ${n} grensovergangen (Tankerkönig, MTS-K).`);
+      parts.push(`Duitsland: live, bijgewerkt ${deWhen()} voor ${n} grensovergangen (Tankerkönig, MTS-K).`);
     } else parts.push("Duitsland: geen live prijzen, Pompsmart rekent met het gemiddelde.");
     parts.push(liveNL
       ? `Nederland: gemiddelde van ${ddmm(liveNL.date)} (CBS).`

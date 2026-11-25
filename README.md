@@ -29,6 +29,15 @@ De API-sleutel staat als geheim in GitHub en komt nooit in de publieke site.
 - GitHub zet geplande workflows in een publieke repository uit na 60 dagen zonder commits, en stuurt daar vooraf een mail over. Zet hem dan weer aan onder **Actions**. Tot die tijd valt de site vanzelf terug op de gemiddelden.
 - De lijst grensovergangen staat op twee plekken: `BORDER.DE` in `index.html` en `POINTS` in het script. Houd de namen gelijk.
 
+## Op tijd bijwerken
+
+GitHub start geplande workflows bij drukte soms uren later, en zet ze in een publieke repository uit na 60 dagen zonder commits. Daarom:
+
+- Een externe cron-dienst (cron-job.org) start **Site publiceren** elke 30 minuten via de GitHub-API (`workflow_dispatch`). Daarvoor is een fijnmazig GitHub-token nodig met alleen *Actions: read and write* op deze repository; dat token staat alleen bij die dienst. Verloopt het token, maak dan een nieuw aan en vervang het daar.
+- GitHubs eigen schema in `pages.yml` (elk uur) is de reserve.
+- `.github/workflows/actief-houden.yml` maakt op de 1e van elke maand een kleine commit (`.github/actief.txt`), zodat GitHub de geplande workflows niet uitzet.
+- De site rekent Duitse prijzen tot 12 uur oud nog als live, met datum en tijd van de update erbij.
+
 ## Belgische maximumprijzen (Statbel)
 
 Voor België gebruikt de site de officiële maximumprijs van vandaag voor Euro 95 (E10) en diesel (B7), zoals de FOD Economie die elke dag vaststelt. Pompen mogen niet meer vragen; aan de grens is tanken vaak iets goedkoper, en dat staat ook op de site.
