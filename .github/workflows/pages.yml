@@ -79,10 +79,11 @@ jobs:
         continue-on-error: true
         uses: actions/deploy-pages@v4
 
-      # Mislukt het publiceren door een storing bij GitHub, dan na 30 seconden nog één keer.
+      # Mislukt het publiceren door een storing bij GitHub, dan na 2 minuten nog één keer:
+      # korte storingen bij GitHub Pages duren vaak een minuut of twee.
       - name: Even wachten voor een tweede poging
         if: steps.deployment.outcome == 'failure'
-        run: sleep 30
+        run: sleep 120
 
       - id: retry
         if: steps.deployment.outcome == 'failure'
