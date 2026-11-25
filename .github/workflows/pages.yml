@@ -1,9 +1,9 @@
 name: Site publiceren
 
 # Publiceert de site bij elke push naar main, en elke 30 minuten opnieuw via een externe
-# cron-dienst (workflow_dispatch). GitHubs eigen schema hieronder is de reserve: GitHub start
+# cron-dienst (workflow_dispatch), met verse prijzen uit Duitsland (Tankerkönig), België
+# (Statbel) en Nederland (CBS). GitHubs eigen schema hieronder is de reserve: GitHub start
 # geplande runs bij drukte soms uren later.
-# met verse Duitse grensprijzen (Tankerkönig) en de Belgische maximumprijs van vandaag (Statbel).
 on:
   push:
     branches: [main]
@@ -20,12 +20,12 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# Twee jobs, zoals in GitHubs eigen sjabloon: eerst bouwen en uploaden, dan publiceren.
+# Zo is de upload helemaal klaar voordat de publicatie hem zoekt; in één job vond GitHub
+# de upload soms een seconde later nog niet ("Found 0 artifact(s)").
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -68,5 +68,22 @@ jobs:
         with:
           path: site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url || steps.retry.outputs.page_url }}
+    steps:
       - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      # Mislukt het publiceren door een storing bij GitHub, dan na 30 seconden nog één keer.
+      - name: Even wachten voor een tweede poging
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+
+      - id: retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
